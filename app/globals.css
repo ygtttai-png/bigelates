@@ -1,0 +1,158 @@
+@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 18px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-lg: calc(var(--radius) * 1.35);
+  --sidebar-w: 252px;
+
+  --bg: #f2ece2;
+  --bg-2: #ece5d8;
+  --surface: #fdfbf7;
+  --surface-2: #f6f1e8;
+  --surface-3: #f0eadd;
+  --ink: #2a2620;
+  --ink-2: #6c6357;
+  --ink-3: #9c9387;
+  --line: #e6ddce;
+  --line-2: #eee7da;
+
+  --sage: #7c9a6f;
+  --sage-ink: #5c7751;
+  --sage-soft: #e9f0e2;
+  --rose: #c68c82;
+  --rose-ink: #a86a60;
+  --rose-soft: #f5e6e1;
+  --plum: #9c84a6;
+  --plum-ink: #7c6486;
+  --plum-soft: #efe8f2;
+  --green: #5e9462;
+  --green-ink: #467049;
+  --green-soft: #e4f0e2;
+  --muted-soft: #ece6da;
+  --muted-ink: #8b8273;
+  --gold: #c2a05c;
+
+  --accent: var(--sage);
+  --accent-ink: var(--sage-ink);
+  --accent-soft: var(--sage-soft);
+
+  --shadow-sm: 0 1px 2px rgba(60, 50, 35, 0.05), 0 1px 1px rgba(60, 50, 35, 0.04);
+  --shadow: 0 4px 14px -6px rgba(60, 50, 35, 0.14), 0 2px 5px -3px rgba(60, 50, 35, 0.08);
+  --shadow-lg: 0 24px 50px -22px rgba(50, 40, 28, 0.3), 0 8px 22px -14px rgba(50, 40, 28, 0.16);
+}
+
+.dark {
+  --bg: #181613;
+  --bg-2: #1f1c18;
+  --surface: #232019;
+  --surface-2: #2b271f;
+  --surface-3: #322d24;
+  --ink: #f0eadd;
+  --ink-2: #a79e8f;
+  --ink-3: #786f62;
+  --line: #322d25;
+  --line-2: #2a261f;
+  --sage: #97b189;
+  --sage-ink: #aec6a1;
+  --sage-soft: #2a2f23;
+  --rose: #d3a399;
+  --rose-ink: #e0b6ad;
+  --rose-soft: #332622;
+  --plum: #b79ec0;
+  --plum-ink: #c9b4d0;
+  --plum-soft: #2c2530;
+  --green: #82b384;
+  --green-ink: #9bc79c;
+  --green-soft: #232e22;
+  --muted-soft: #2c281f;
+  --muted-ink: #8e8576;
+  --gold: #cdae6a;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 30px 60px -24px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-muted: var(--ink-2);
+  --color-muted-foreground: var(--ink-3);
+  --color-border: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: #ffffff;
+  --color-destructive: var(--rose);
+  --color-destructive-foreground: var(--rose-ink);
+  --font-sans: var(--font-sans);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Legacy design system classes preserved from prototype */
+.screen-enter {
+  animation: screenIn 0.34s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes screenIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes barGrow {
+  from {
+    height: 0 !important;
+    opacity: 0.4;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+}
+
+.bar-fill {
+  animation: barGrow 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.toast-wrap {
+  animation: toastIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
