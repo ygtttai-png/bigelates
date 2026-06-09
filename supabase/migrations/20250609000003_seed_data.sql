@@ -7,7 +7,7 @@
 -- Kullanım (kayıt sonrası, isteğe bağlı):
 --   SELECT seed_studio_data('<studio_id>');
 --
--- Ücretler stüdyo varsayılanlarıyla uyumludur (price_ozel: 500, price_grup: 200).
+-- Ücretler stüdyo varsayılanlarıyla uyumludur (price_ozel: 750, price_grup: 200).
 -- Gerçek fiyatlar panel → Stüdyo ayarlarından güncellenir.
 -- =============================================================================
 
@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION seed_studio_data(p_studio_id UUID)
 RETURNS void AS $$
 DECLARE
   s1 UUID; s2 UUID; s3 UUID; s4 UUID; s5 UUID;
-  price_ozel NUMERIC := 500;   -- örnek özel ders ücreti (TL)
+  price_ozel NUMERIC := 750;   -- örnek özel ders ücreti (TL)
   price_grup NUMERIC := 200;   -- örnek grup dersi kişi başı ücret (TL)
   l_id UUID;
 BEGIN

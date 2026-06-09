@@ -16,6 +16,24 @@ export const PAY_LABEL: Record<"odendi" | "bekliyor", string> = {
   bekliyor: "Bekliyor",
 };
 
+/** Geldi veya gelmedi → paketten 1 ders düşer */
+export function consumesPackageCredit(status: LessonStatus): boolean {
+  return status === "geldi" || status === "gelmedi";
+}
+
+/**
+ * Kazanç: geldi + gelmedi (gün içi iptal/no-show ücretli).
+ * İptal ve planlı dersler kazanca dahil değil.
+ */
+export function earnedFee(l: Lesson): number {
+  return consumesPackageCredit(l.status) ? l.fee : 0;
+}
+
+/** Beklenen kazanç: henüz gerçekleşmemiş planlı dersler */
+export function expectedFee(l: Lesson): number {
+  return l.status === "planlandi" ? l.fee : 0;
+}
+
 export function lessonsOn(lessons: Lesson[], date: Date): Lesson[] {
   const s = ymd(date);
   return lessons
@@ -27,14 +45,6 @@ export function lessonsInRange(lessons: Lesson[], start: Date, end: Date): Lesso
   const a = ymd(start);
   const b = ymd(end);
   return lessons.filter((l) => l.date >= a && l.date <= b);
-}
-
-export function earnedFee(l: Lesson): number {
-  return l.status === "geldi" ? l.fee : 0;
-}
-
-export function expectedFee(l: Lesson): number {
-  return l.status === "geldi" || l.status === "planlandi" ? l.fee : 0;
 }
 
 export function resolveLessonStatus(
@@ -61,3 +71,6 @@ export const TIME_OPTIONS: string[] = (() => {
   }
   return options;
 })();
+
+export const DEFAULT_PRICE_OZEL = 750;
+export const DEFAULT_PRICE_GRUP = 200;

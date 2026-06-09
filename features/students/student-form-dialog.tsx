@@ -6,8 +6,15 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/providers/app-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { studentSchema } from "@/lib/validations/student";
+import {
+  studentCreateSchema,
+  studentUpdateSchema,
+} from "@/lib/validations/student";
 import { today, ymd } from "@/utils/date";
+import {
+  DEFAULT_PACKAGE_BY_TYPE,
+  PACKAGE_OPTIONS,
+} from "@/utils/students";
 import type { Student } from "@/types";
 
 interface StudentFormDialogProps {
@@ -15,8 +22,6 @@ interface StudentFormDialogProps {
   onClose: () => void;
   student?: Student | null;
 }
-
-const DEFAULT_PACKAGE = 8;
 
 export function StudentFormDialog({ open, onClose, student }: StudentFormDialogProps) {
   const { createStudent, updateStudent } = useApp();
@@ -26,8 +31,8 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [type, setType] = useState<"ozel" | "grup">("ozel");
-  const [packageTotal, setPackageTotal] = useState(DEFAULT_PACKAGE);
-  const [remaining, setRemaining] = useState(DEFAULT_PACKAGE);
+  const [packageTotal, setPackageTotal] = useState<number>(DEFAULT_PACKAGE_BY_TYPE.ozel);
+  const [packageRenewal, setPackageRenewal] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState<"odendi" | "bekliyor">("odendi");
   const [joinDate, setJoinDate] = useState(ymd(today()));
   const [notes, setNotes] = useState("");
@@ -40,8 +45,7 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
       setName(student.name);
       setPhone(student.phone);
       setType(student.type);
-      setPackageTotal(student.package_total);
-      setRemaining(student.remaining);
+      setPackageRenewal(0);
       setPaymentStatus(student.payment_status);
       setJoinDate(student.join_date);
       setNotes(student.notes ?? "");
@@ -49,8 +53,8 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
       setName("");
       setPhone("");
       setType("ozel");
-      setPackageTotal(DEFAULT_PACKAGE);
-      setRemaining(DEFAULT_PACKAGE);
+      setPackageTotal(DEFAULT_PACKAGE_BY_TYPE.ozel);
+      setPackageRenewal(0);
       setPaymentStatus("odendi");
       setJoinDate(ymd(today()));
       setNotes("");
@@ -58,42 +62,60 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
     setErrors({});
   }, [open, student]);
 
-  const handlePackageChange = (value: number) => {
-    const next = Math.max(1, value);
-    setPackageTotal(next);
-    if (!editing) setRemaining(next);
+  const handleTypeChange = (next: "ozel" | "grup") => {
+    setType(next);
+    if (!editing) {
+      setPackageTotal(DEFAULT_PACKAGE_BY_TYPE[next]);
+    }
   };
 
   const save = async () => {
-    const payload = {
-      name,
-      phone,
-      type,
-      packageTotal,
-      remaining,
-      paymentStatus,
-      joinDate,
-      notes: notes || null,
-    };
-
-    const parsed = studentSchema.safeParse(payload);
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((e) => {
-        const key = e.path[0]?.toString() ?? "form";
-        fieldErrors[key] = e.message;
-      });
-      setErrors(fieldErrors);
-      toast("Lütfen eksik alanları kontrol edin", { tone: "rose", icon: "x" });
-      return;
-    }
-
     setSaving(true);
     try {
       if (editing && student) {
+        const payload = {
+          name,
+          phone,
+          type,
+          paymentStatus,
+          joinDate,
+          notes: notes || null,
+          packageRenewal: packageRenewal > 0 ? packageRenewal : undefined,
+        };
+        const parsed = studentUpdateSchema.safeParse(payload);
+        if (!parsed.success) {
+          const fieldErrors: Record<string, string> = {};
+          parsed.error.errors.forEach((e) => {
+            const key = e.path[0]?.toString() ?? "form";
+            fieldErrors[key] = e.message;
+          });
+          setErrors(fieldErrors);
+          toast("Lütfen eksik alanları kontrol edin", { tone: "rose", icon: "x" });
+          return;
+        }
         await updateStudent(student.id, parsed.data);
         toast("Öğrenci güncellendi", { tone: "green", icon: "check" });
       } else {
+        const payload = {
+          name,
+          phone,
+          type,
+          packageTotal,
+          paymentStatus,
+          joinDate,
+          notes: notes || null,
+        };
+        const parsed = studentCreateSchema.safeParse(payload);
+        if (!parsed.success) {
+          const fieldErrors: Record<string, string> = {};
+          parsed.error.errors.forEach((e) => {
+            const key = e.path[0]?.toString() ?? "form";
+            fieldErrors[key] = e.message;
+          });
+          setErrors(fieldErrors);
+          toast("Lütfen eksik alanları kontrol edin", { tone: "rose", icon: "x" });
+          return;
+        }
         await createStudent(parsed.data);
         toast("Öğrenci eklendi", { tone: "green", icon: "check" });
       }
@@ -109,6 +131,8 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
   };
 
   if (!open) return null;
+
+  const packageOptions = PACKAGE_OPTIONS[type];
 
   return (
     <div
@@ -157,7 +181,7 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
                       ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow-sm)]"
                       : "text-[var(--ink-2)]"
                   }`}
-                  onClick={() => setType(t)}
+                  onClick={() => handleTypeChange(t)}
                 >
                   {t === "ozel" ? "Özel ders" : "Grup dersi"}
                 </button>
@@ -165,27 +189,52 @@ export function StudentFormDialog({ open, onClose, student }: StudentFormDialogP
             </div>
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Paket (toplam ders)" error={errors.packageTotal}>
-              <Input
-                type="number"
-                min={1}
+          {editing && student ? (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
+              <p className="mb-2 text-[13px] font-semibold text-[var(--ink-2)]">Paket durumu</p>
+              <div className="flex items-baseline gap-2">
+                <span className="tnum text-2xl font-extrabold text-[var(--accent-ink)]">
+                  {student.remaining}
+                </span>
+                <span className="text-sm text-[var(--ink-3)]">/ {student.package_total} ders kaldı</span>
+              </div>
+              <p className="mt-2 text-xs text-[var(--ink-3)]">
+                Kalan ders, ders &quot;Geldi&quot; veya &quot;Gelmedi&quot; işaretlendiğinde otomatik düşer.
+                İptal edilen dersler paketten düşmez.
+              </p>
+              <Field label="Pakete ders ekle (yenileme)" error={errors.packageRenewal} className="mt-4">
+                <select
+                  className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm"
+                  value={packageRenewal}
+                  onChange={(e) => setPackageRenewal(Number(e.target.value))}
+                >
+                  <option value={0}>Yenileme yok</option>
+                  {packageOptions.map((n) => (
+                    <option key={n} value={n}>
+                      +{n} ders ekle
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          ) : (
+            <Field label="Paket (ders sayısı)" error={errors.packageTotal}>
+              <select
+                className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm"
                 value={packageTotal}
-                onChange={(e) => handlePackageChange(Number(e.target.value))}
-                error={!!errors.packageTotal}
-              />
+                onChange={(e) => setPackageTotal(Number(e.target.value))}
+              >
+                {packageOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n} ders
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-xs text-[var(--ink-3)]">
+                Kalan ders otomatik hesaplanır; ders işaretlendiğinde düşer.
+              </p>
             </Field>
-            <Field label="Kalan ders" error={errors.remaining}>
-              <Input
-                type="number"
-                min={0}
-                max={packageTotal}
-                value={remaining}
-                onChange={(e) => setRemaining(Number(e.target.value))}
-                error={!!errors.remaining}
-              />
-            </Field>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Ödeme durumu">
@@ -236,13 +285,15 @@ function Field({
   label,
   error,
   children,
+  className,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={className}>
       <label className="mb-1.5 block text-[13px] font-semibold text-[var(--ink-2)]">{label}</label>
       {children}
       {error && <p className="mt-1 text-xs font-medium text-[var(--rose-ink)]">{error}</p>}

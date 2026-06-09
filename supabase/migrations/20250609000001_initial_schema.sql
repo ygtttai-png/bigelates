@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS studios (
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
   owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  settings JSONB NOT NULL DEFAULT '{"price_ozel": 500, "price_grup": 200, "work_slots": 12, "accent_color": "#7C9A6F"}'::jsonb,
+  settings JSONB NOT NULL DEFAULT '{"price_ozel": 750, "price_grup": 200, "work_slots": 12, "accent_color": "#7C9A6F"}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted_at TIMESTAMPTZ

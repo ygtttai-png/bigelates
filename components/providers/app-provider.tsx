@@ -8,7 +8,7 @@ import { useLessons } from "@/hooks/use-lessons";
 import { useStudents } from "@/hooks/use-students";
 import type { Lesson, Profile, Student, Studio } from "@/types";
 import type { LessonInput } from "@/lib/validations/lesson";
-import type { StudentInput } from "@/lib/validations/student";
+import type { StudentCreateInput, StudentUpdateInput } from "@/lib/validations/student";
 import type { LessonStatus } from "@/types";
 
 interface AppContextValue {
@@ -22,8 +22,8 @@ interface AppContextValue {
   createLesson: (input: LessonInput) => Promise<Lesson>;
   updateLesson: (id: string, input: LessonInput) => Promise<Lesson>;
   deleteLesson: (id: string) => Promise<void>;
-  createStudent: (input: StudentInput) => Promise<Student>;
-  updateStudent: (id: string, input: StudentInput) => Promise<Student>;
+  createStudent: (input: StudentCreateInput) => Promise<Student>;
+  updateStudent: (id: string, input: StudentUpdateInput) => Promise<Student>;
   deleteStudent: (id: string) => Promise<void>;
   studentById: (id: string) => Student | undefined;
 }

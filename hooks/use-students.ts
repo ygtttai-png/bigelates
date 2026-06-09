@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StudentsService } from "@/services/students.service";
-import type { StudentInput } from "@/lib/validations/student";
+import type { StudentCreateInput, StudentUpdateInput } from "@/lib/validations/student";
 import type { Student } from "@/types";
 
 interface UseStudentsOptions {
@@ -61,7 +61,7 @@ export function useStudents({ studioId }: UseStudentsOptions) {
   }, [studioId, fetchStudents]);
 
   const createStudent = useCallback(
-    async (input: StudentInput) => {
+    async (input: StudentCreateInput) => {
       if (!studioId) throw new Error("Stüdyo bulunamadı");
       const supabase = createClient();
       const service = new StudentsService(supabase);
@@ -72,7 +72,7 @@ export function useStudents({ studioId }: UseStudentsOptions) {
     [studioId]
   );
 
-  const updateStudent = useCallback(async (id: string, input: StudentInput) => {
+  const updateStudent = useCallback(async (id: string, input: StudentUpdateInput) => {
     const supabase = createClient();
     const service = new StudentsService(supabase);
     const updated = await service.update(id, input);

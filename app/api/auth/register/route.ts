@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         slug,
         owner_id: userId,
         settings: {
-          price_ozel: 500,
+          price_ozel: 750,
           price_grup: 200,
           work_slots: 12,
           accent_color: "#7C9A6F",

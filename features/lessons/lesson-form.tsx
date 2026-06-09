@@ -12,7 +12,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { lessonSchema } from "@/lib/validations/lesson";
 import { fmtMoney } from "@/utils/currency";
 import { today, ymd } from "@/utils/date";
-import { TIME_OPTIONS } from "@/utils/lessons";
+import { DEFAULT_PRICE_GRUP, DEFAULT_PRICE_OZEL, TIME_OPTIONS } from "@/utils/lessons";
 
 interface LessonFormProps {
   lessonId?: string;
@@ -24,8 +24,8 @@ export function LessonForm({ lessonId }: LessonFormProps) {
   const { lessons, students, studio, loading, createLesson, updateLesson, deleteLesson } = useApp();
 
   const editing = lessonId ? lessons.find((l) => l.id === lessonId) : null;
-  const PRICE_OZEL = studio?.settings?.price_ozel ?? 500;
-  const PRICE_GRUP = studio?.settings?.price_grup ?? 200;
+  const PRICE_OZEL = studio?.settings?.price_ozel ?? DEFAULT_PRICE_OZEL;
+  const PRICE_GRUP = studio?.settings?.price_grup ?? DEFAULT_PRICE_GRUP;
 
   const [date, setDate] = useState(editing?.date ?? ymd(today()));
   const [time, setTime] = useState(editing?.time?.slice(0, 5) ?? "09:00");

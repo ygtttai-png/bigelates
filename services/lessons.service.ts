@@ -1,9 +1,15 @@
 import type { Lesson, LessonStatus } from "@/types";
 import type { LessonInput } from "@/lib/validations/lesson";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
+import { StudentsService } from "@/services/students.service";
+import { consumesPackageCredit } from "@/utils/lessons";
 
 export class LessonsService {
-  constructor(private readonly supabase: AppSupabaseClient) {}
+  private readonly students: StudentsService;
+
+  constructor(private readonly supabase: AppSupabaseClient) {
+    this.students = new StudentsService(supabase);
+  }
 
   async getAll(studioId: string): Promise<Lesson[]> {
     const { data: lessons, error } = await this.supabase
@@ -83,10 +89,21 @@ export class LessonsService {
 
     if (linkError) throw new Error(linkError.message);
 
+    if (consumesPackageCredit(input.status)) {
+      await this.students.adjustPackageCredits(input.studentIds, -1);
+    }
+
     return { ...(data as Lesson), student_ids: input.studentIds };
   }
 
   async update(id: string, input: LessonInput): Promise<Lesson> {
+    const existing = await this.getById(id);
+    if (!existing) throw new Error("Ders bulunamadı");
+
+    if (consumesPackageCredit(existing.status)) {
+      await this.students.adjustPackageCredits(existing.student_ids ?? [], 1);
+    }
+
     const { data, error } = await this.supabase
       .from("lessons")
       .update({
@@ -114,19 +131,45 @@ export class LessonsService {
 
     if (linkError) throw new Error(linkError.message);
 
+    if (consumesPackageCredit(input.status)) {
+      await this.students.adjustPackageCredits(input.studentIds, -1);
+    }
+
     return { ...(data as Lesson), student_ids: input.studentIds };
   }
 
   async setStatus(id: string, status: LessonStatus): Promise<void> {
+    const existing = await this.getById(id);
+    if (!existing) throw new Error("Ders bulunamadı");
+
+    const oldStatus = existing.status;
+    const studentIds = existing.student_ids ?? [];
+
     const { error } = await this.supabase
       .from("lessons")
       .update({ status })
       .eq("id", id);
 
     if (error) throw new Error(error.message);
+
+    const wasConsuming = consumesPackageCredit(oldStatus);
+    const nowConsuming = consumesPackageCredit(status);
+
+    if (wasConsuming && !nowConsuming) {
+      await this.students.adjustPackageCredits(studentIds, 1);
+    } else if (!wasConsuming && nowConsuming) {
+      await this.students.adjustPackageCredits(studentIds, -1);
+    }
   }
 
   async softDelete(id: string): Promise<void> {
+    const existing = await this.getById(id);
+    if (!existing) throw new Error("Ders bulunamadı");
+
+    if (consumesPackageCredit(existing.status)) {
+      await this.students.adjustPackageCredits(existing.student_ids ?? [], 1);
+    }
+
     const { error } = await this.supabase
       .from("lessons")
       .update({ deleted_at: new Date().toISOString() })
