@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         owner_id: userId,
         settings: {
           price_ozel: 750,
-          price_grup: 200,
+          price_grup: 250,
           work_slots: 12,
           accent_color: "#7C9A6F",
         },

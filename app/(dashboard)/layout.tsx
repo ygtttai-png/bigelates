@@ -2,6 +2,7 @@ import { AppProvider } from "@/components/providers/app-provider";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
+import { NotificationManager } from "@/components/pwa/notification-manager";
 import { PwaInstallPrompt } from "@/components/pwa/install-prompt";
 
 export default function DashboardLayout({
@@ -20,6 +21,7 @@ export default function DashboardLayout({
           </main>
         </div>
         <BottomNav />
+        <NotificationManager />
         <PwaInstallPrompt />
       </div>
     </AppProvider>
