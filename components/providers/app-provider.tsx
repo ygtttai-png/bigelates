@@ -8,6 +8,7 @@ import { useLessons } from "@/hooks/use-lessons";
 import { useStudents } from "@/hooks/use-students";
 import type { Lesson, Profile, Student, Studio } from "@/types";
 import type { LessonInput } from "@/lib/validations/lesson";
+import type { StudentInput } from "@/lib/validations/student";
 import type { LessonStatus } from "@/types";
 
 interface AppContextValue {
@@ -21,6 +22,9 @@ interface AppContextValue {
   createLesson: (input: LessonInput) => Promise<Lesson>;
   updateLesson: (id: string, input: LessonInput) => Promise<Lesson>;
   deleteLesson: (id: string) => Promise<void>;
+  createStudent: (input: StudentInput) => Promise<Student>;
+  updateStudent: (id: string, input: StudentInput) => Promise<Student>;
+  deleteStudent: (id: string) => Promise<void>;
   studentById: (id: string) => Student | undefined;
 }
 
@@ -48,6 +52,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     students,
     loading: studentsLoading,
     error: studentsError,
+    createStudent,
+    updateStudent,
+    deleteStudent,
   } = useStudents({ studioId });
 
   const studentById = React.useCallback(
@@ -66,6 +73,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     createLesson,
     updateLesson,
     deleteLesson,
+    createStudent,
+    updateStudent,
+    deleteStudent,
     studentById,
   };
 

@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useApp } from "@/components/providers/app-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { StudentFormDialog } from "@/features/students/student-form-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { StudentsService } from "@/services/students.service";
 import { fmtMoney } from "@/utils/currency";
@@ -31,6 +32,7 @@ export function StudentDetail({ studentId }: StudentDetailProps) {
   const [tab, setTab] = useState<"lessons" | "pay" | "notes">("lessons");
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -78,6 +80,9 @@ export function StudentDetail({ studentId }: StudentDetailProps) {
           </div>
         </div>
         <div className="hidden items-center gap-2 lg:flex">
+          <Button variant="secondary" onClick={() => setEditOpen(true)}>
+            <Icon name="edit" /> Düzenle
+          </Button>
           <Button variant="secondary" onClick={() => toast("Arama başlatılıyor…", { tone: "sage", icon: "phone" })}>
             <Icon name="phone" /> Ara
           </Button>
@@ -86,6 +91,8 @@ export function StudentDetail({ studentId }: StudentDetailProps) {
           </Button>
         </div>
       </div>
+
+      <StudentFormDialog open={editOpen} onClose={() => setEditOpen(false)} student={s} />
 
       <div className="grid items-start gap-5 lg:grid-cols-[320px_1fr] lg:gap-[22px]">
         <div className="flex flex-col gap-4 lg:gap-[18px]">

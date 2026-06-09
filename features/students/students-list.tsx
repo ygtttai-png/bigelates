@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { LoadingState } from "@/components/ui/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { useApp } from "@/components/providers/app-provider";
+import { StudentFormDialog } from "@/features/students/student-form-dialog";
 import { PAY_LABEL } from "@/utils/lessons";
 import type { Lesson, Student } from "@/types";
 
@@ -29,6 +30,7 @@ export function StudentsList() {
   const { students, lessons, loading, error } = useApp();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [formOpen, setFormOpen] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -59,11 +61,9 @@ export function StudentsList() {
         eyebrow={`${students.length} öğrenci · ${pending} ödeme bekliyor`}
         title="Öğrenciler"
         action={
-          <Button asChild className="hidden lg:inline-flex">
-            <Link href="/lessons/new">
-              <Icon name="plus" />
-              Ders Ekle
-            </Link>
+          <Button onClick={() => setFormOpen(true)} className="hidden lg:inline-flex">
+            <Icon name="plus" />
+            Öğrenci Ekle
           </Button>
         }
       />
@@ -78,28 +78,34 @@ export function StudentsList() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {(
-            [
-              ["all", "Tümü"],
-              ["ozel", "Özel"],
-              ["grup", "Grup"],
-              ["bekliyor", "Ödeme bekleyen"],
-            ] as const
-          ).map(([k, l]) => (
-            <button
-              key={k}
-              type="button"
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                filter === k
-                  ? "border-transparent bg-[var(--accent-soft)] font-semibold text-[var(--accent-ink)]"
-                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--accent)]"
-              }`}
-              onClick={() => setFilter(k)}
-            >
-              {l}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => setFormOpen(true)} className="lg:hidden">
+            <Icon name="plus" size={16} />
+            Ekle
+          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["all", "Tümü"],
+                ["ozel", "Özel"],
+                ["grup", "Grup"],
+                ["bekliyor", "Ödeme bekleyen"],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                  filter === k
+                    ? "border-transparent bg-[var(--accent-soft)] font-semibold text-[var(--accent-ink)]"
+                    : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--accent)]"
+                }`}
+                onClick={() => setFilter(k)}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -114,8 +120,20 @@ export function StudentsList() {
         {rows.map(({ s }) => (
           <StudentRow key={s.id} student={s} />
         ))}
-        {rows.length === 0 && <EmptyState icon="users" message="Sonuç bulunamadı." />}
+        {rows.length === 0 && students.length === 0 && (
+          <EmptyState icon="users" message="Henüz öğrenci yok.">
+            <Button onClick={() => setFormOpen(true)}>
+              <Icon name="plus" />
+              İlk öğrenciyi ekle
+            </Button>
+          </EmptyState>
+        )}
+        {rows.length === 0 && students.length > 0 && (
+          <EmptyState icon="search" message="Arama kriterlerine uygun öğrenci bulunamadı." />
+        )}
       </Card>
+
+      <StudentFormDialog open={formOpen} onClose={() => setFormOpen(false)} />
     </>
   );
 }
