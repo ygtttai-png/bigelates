@@ -33,9 +33,14 @@ export async function POST(request: Request) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !serviceKey) {
+    if (
+      !supabaseUrl ||
+      !serviceKey ||
+      supabaseUrl.includes("placeholder") ||
+      serviceKey.includes("placeholder")
+    ) {
       return NextResponse.json(
-        { error: "Sunucu yapılandırması eksik" },
+        { error: "Supabase yapılandırması eksik. .env.local dosyasını kontrol edin." },
         { status: 500 }
       );
     }
@@ -44,19 +49,21 @@ export async function POST(request: Request) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: authData, error: signUpError } = await admin.auth.signUp({
+    // admin.createUser: e-posta onayı olmadan hesap oluşturur
+    const { data: authData, error: createError } = await admin.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { full_name: fullName, role: "admin" },
-      },
+      email_confirm: true,
+      user_metadata: { full_name: fullName, role: "admin" },
     });
 
-    if (signUpError || !authData.user) {
-      return NextResponse.json(
-        { error: signUpError?.message ?? "Kayıt başarısız" },
-        { status: 400 }
-      );
+    if (createError || !authData.user) {
+      const msg = createError?.message ?? "Kayıt başarısız";
+      const friendly =
+        msg.includes("already been registered") || msg.includes("already exists")
+          ? "Bu e-posta adresi zaten kayıtlı"
+          : msg;
+      return NextResponse.json({ error: friendly }, { status: 400 });
     }
 
     const userId = authData.user.id;
@@ -81,27 +88,35 @@ export async function POST(request: Request) {
     const studioRow = studio as Studio | null;
 
     if (studioError || !studioRow) {
+      // Kullanıcı oluştu ama stüdyo oluşmadı — temizlik
+      await admin.auth.admin.deleteUser(userId);
       return NextResponse.json(
-        { error: studioError?.message ?? "Stüdyo oluşturulamadı" },
+        { error: studioError?.message ?? "Stüdyo oluşturulamadı. Migration'ları çalıştırdınız mı?" },
         { status: 500 }
       );
     }
 
-    const { error: profileError } = await admin
-      .from("profiles")
-      .update({
+    // Trigger profil oluşturmuş olabilir — upsert ile güncelle
+    const { error: profileError } = await admin.from("profiles").upsert(
+      {
+        id: userId,
+        email,
         full_name: fullName,
         role: "admin",
         studio_id: studioRow.id,
-      })
-      .eq("id", userId);
+      },
+      { onConflict: "id" }
+    );
 
     if (profileError) {
+      await admin.from("studios").delete().eq("id", studioRow.id);
+      await admin.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, studioId: studioRow.id });
-  } catch {
-    return NextResponse.json({ error: "Beklenmeyen hata" }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Beklenmeyen hata";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

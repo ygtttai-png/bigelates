@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export function RegisterForm() {
@@ -33,6 +34,20 @@ export function RegisterForm() {
 
     if (!res.ok) {
       setError(json.error ?? "Kayıt başarısız");
+      return;
+    }
+
+    // API hesabı oluşturur; oturumu client'ta aç
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (signInError) {
+      setError(
+        "Hesap oluşturuldu ancak oturum açılamadı. Giriş sayfasından deneyin."
+      );
       return;
     }
 

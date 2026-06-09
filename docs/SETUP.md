@@ -23,20 +23,37 @@ npm install
 
 ## 3. Veritabanı migration'larını çalıştırın
 
-Supabase Dashboard → SQL Editor'da sırayla çalıştırın:
+Supabase Dashboard → **SQL Editor**'da **sırayla** çalıştırın (her dosyayı ayrı Run):
 
-1. `supabase/migrations/20250609000001_initial_schema.sql`
-2. `supabase/migrations/20250609000002_rls_policies.sql`
-3. `supabase/migrations/20250609000003_seed_data.sql`
+1. `supabase/migrations/20250609000001_initial_schema.sql` — tablolar
+2. `supabase/migrations/20250609000002_rls_policies.sql` — güvenlik politikaları
+3. `supabase/migrations/20250609000003_seed_data.sql` — (isteğe bağlı) demo veri
+
+> Migration'lar **idempotent**'tir; hata aldıysanız aynı dosyayı tekrar çalıştırabilirsiniz.
+> `user_role already exists` veya `studios does not exist` hatası aldıysanız: önce **01**, sonra **02** dosyasını tekrar çalıştırın.
 
 ## 4. Auth ayarları
 
-Supabase Dashboard → Authentication → URL Configuration:
+Supabase Dashboard → **Authentication**:
 
+**URL Configuration**
 - **Site URL**: `http://localhost:3000` (dev) / `https://your-domain.vercel.app` (prod)
 - **Redirect URLs**:
   - `http://localhost:3000/reset-password`
   - `https://your-domain.vercel.app/reset-password`
+
+**Providers → Email**
+- Email provider açık olmalı
+- Kayıt için e-posta onayı zorunlu değil (API `email_confirm: true` ile oluşturur)
+- İsteğe bağlı: "Confirm email" kapalı bırakılabilir (geliştirme için daha kolay)
+
+**`.env.local` gerçek değerler içermeli** — `placeholder` değerleriyle kayıt çalışmaz:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbG...  (service_role — gizli tutun!)
+```
 
 ## 5. Ortam değişkenleri
 
