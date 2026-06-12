@@ -137,15 +137,16 @@ function ColumnsView({
                 </div>
               )}
               {ls.map((l) => (
-                <Link
+                <div
                   key={l.id}
-                  href={`/lessons/${l.id}/edit`}
-                  className={`relative z-[1] cursor-pointer rounded-[10px] border border-transparent bg-[var(--surface)] py-2 pl-3 pr-2.5 text-xs shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)] before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[3px] before:rounded ${l.type === "ozel" ? "before:bg-[var(--sage)]" : "before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""} ${l.status === "iptal" ? "opacity-55" : ""}`}
+                  className={`relative z-[1] rounded-[10px] border border-transparent bg-[var(--surface)] py-2 pl-3 pr-2.5 text-xs shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)] before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[3px] before:rounded ${l.type === "ozel" ? "before:bg-[var(--sage)]" : "before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""} ${l.status === "iptal" ? "opacity-55" : ""}`}
                 >
-                  <div className="tnum text-[11.5px] font-bold">{l.time.slice(0, 5)}</div>
-                  <div className={`truncate text-xs font-semibold ${l.status === "iptal" ? "line-through" : ""}`}>
-                    {blockLabel(l, studentById)}
-                  </div>
+                  <Link href={`/lessons/${l.id}/edit`} className="block">
+                    <div className="tnum text-[11.5px] font-bold">{l.time.slice(0, 5)}</div>
+                    <div className={`truncate text-xs font-semibold ${l.status === "iptal" ? "line-through" : ""}`}>
+                      {blockLabel(l, studentById)}
+                    </div>
+                  </Link>
                   <div className="mt-1 flex items-center justify-between gap-1">
                     <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${l.type === "ozel" ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]" : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"}`}>
                       {l.type === "ozel" ? "Özel" : "Grup"}
@@ -158,7 +159,7 @@ function ColumnsView({
                       />
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ))}

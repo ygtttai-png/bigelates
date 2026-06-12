@@ -127,8 +127,7 @@ export function LessonForm({ lessonId }: LessonFormProps) {
     }
   };
 
-  const isRecurringLesson =
-    editing?.recurrence !== "none" && !!editing?.recurrence_group_id;
+  const isRecurringLesson = !!editing?.recurrence_group_id;
 
   if (loading) return <LoadingState />;
 

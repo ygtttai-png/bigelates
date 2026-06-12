@@ -50,8 +50,11 @@ export function LessonDeleteButton({
       );
       onDeleted?.();
       if (redirectTo) router.push(redirectTo);
-    } catch {
-      toast("Silme başarısız", { tone: "rose", icon: "x" });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Silme başarısız", {
+        tone: "rose",
+        icon: "x",
+      });
     }
   };
 
