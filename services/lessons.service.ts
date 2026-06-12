@@ -1,8 +1,9 @@
 import type { Lesson, LessonStatus } from "@/types";
-import type { LessonInput } from "@/lib/validations/lesson";
+import type { LessonDeleteScope, LessonInput } from "@/lib/validations/lesson";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { StudentsService } from "@/services/students.service";
 import { consumesPackageCredit } from "@/utils/lessons";
+import { generateRecurringDates } from "@/utils/recurrence";
 
 export class LessonsService {
   private readonly students: StudentsService;
@@ -38,6 +39,8 @@ export class LessonsService {
 
     return ((lessons ?? []) as Lesson[]).map((l) => ({
       ...l,
+      recurrence: l.recurrence ?? "none",
+      recurrence_group_id: l.recurrence_group_id ?? null,
       student_ids: byLesson.get(l.id) ?? [],
     }));
   }
@@ -57,43 +60,66 @@ export class LessonsService {
       .select("student_id")
       .eq("lesson_id", id);
 
+    const lesson = data as Lesson;
     return {
-      ...(data as Lesson),
+      ...lesson,
+      recurrence: lesson.recurrence ?? "none",
+      recurrence_group_id: lesson.recurrence_group_id ?? null,
       student_ids: ((links ?? []) as { student_id: string }[]).map((l) => l.student_id),
     };
   }
 
-  async create(studioId: string, input: LessonInput): Promise<Lesson> {
-    const { data, error } = await this.supabase
-      .from("lessons")
-      .insert({
-        studio_id: studioId,
-        date: input.date,
-        time: input.time,
-        type: input.type,
-        status: input.status,
-        fee: input.fee,
-        note: input.note ?? null,
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    const { error: linkError } = await this.supabase.from("lesson_students").insert(
-      input.studentIds.map((studentId) => ({
-        lesson_id: data.id,
+  private async linkStudents(lessonId: string, studentIds: string[]): Promise<void> {
+    const { error } = await this.supabase.from("lesson_students").insert(
+      studentIds.map((studentId) => ({
+        lesson_id: lessonId,
         student_id: studentId,
       }))
     );
+    if (error) throw new Error(error.message);
+  }
 
-    if (linkError) throw new Error(linkError.message);
+  async create(studioId: string, input: LessonInput): Promise<Lesson> {
+    const recurrence = input.recurrence ?? "none";
+    const isRecurring = recurrence === "weekly" || recurrence === "monthly";
+    const groupId = isRecurring ? crypto.randomUUID() : null;
+    const dates = isRecurring
+      ? generateRecurringDates(input.date, recurrence)
+      : [input.date];
 
-    if (consumesPackageCredit(input.status)) {
-      await this.students.adjustPackageCredits(input.studentIds, -1);
+    const rows = dates.map((date, index) => ({
+      studio_id: studioId,
+      date,
+      time: input.time,
+      type: input.type,
+      status: index === 0 ? input.status : ("planlandi" as LessonStatus),
+      fee: input.fee,
+      note: input.note ?? null,
+      recurrence,
+      recurrence_group_id: groupId,
+    }));
+
+    const { data, error } = await this.supabase.from("lessons").insert(rows).select();
+
+    if (error) throw new Error(error.message);
+    if (!data?.length) throw new Error("Ders oluşturulamadı");
+
+    const createdLessons = data as Lesson[];
+
+    for (const lesson of createdLessons) {
+      await this.linkStudents(lesson.id, input.studentIds);
+      if (consumesPackageCredit(lesson.status)) {
+        await this.students.adjustPackageCredits(input.studentIds, -1);
+      }
     }
 
-    return { ...(data as Lesson), student_ids: input.studentIds };
+    const first = createdLessons[0]!;
+    return {
+      ...first,
+      recurrence: first.recurrence ?? recurrence,
+      recurrence_group_id: first.recurrence_group_id ?? groupId,
+      student_ids: input.studentIds,
+    };
   }
 
   async update(id: string, input: LessonInput): Promise<Lesson> {
@@ -122,20 +148,19 @@ export class LessonsService {
 
     await this.supabase.from("lesson_students").delete().eq("lesson_id", id);
 
-    const { error: linkError } = await this.supabase.from("lesson_students").insert(
-      input.studentIds.map((studentId) => ({
-        lesson_id: id,
-        student_id: studentId,
-      }))
-    );
-
-    if (linkError) throw new Error(linkError.message);
+    await this.linkStudents(id, input.studentIds);
 
     if (consumesPackageCredit(input.status)) {
       await this.students.adjustPackageCredits(input.studentIds, -1);
     }
 
-    return { ...(data as Lesson), student_ids: input.studentIds };
+    const updated = data as Lesson;
+    return {
+      ...updated,
+      recurrence: updated.recurrence ?? existing.recurrence,
+      recurrence_group_id: updated.recurrence_group_id ?? existing.recurrence_group_id,
+      student_ids: input.studentIds,
+    };
   }
 
   async setStatus(id: string, status: LessonStatus): Promise<void> {
@@ -162,19 +187,41 @@ export class LessonsService {
     }
   }
 
-  async softDelete(id: string): Promise<void> {
-    const existing = await this.getById(id);
-    if (!existing) throw new Error("Ders bulunamadı");
-
-    if (consumesPackageCredit(existing.status)) {
-      await this.students.adjustPackageCredits(existing.student_ids ?? [], 1);
+  private async softDeleteOne(lesson: Lesson): Promise<void> {
+    if (consumesPackageCredit(lesson.status)) {
+      await this.students.adjustPackageCredits(lesson.student_ids ?? [], 1);
     }
 
     const { error } = await this.supabase
       .from("lessons")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", lesson.id);
 
     if (error) throw new Error(error.message);
+  }
+
+  async softDelete(id: string, scope: LessonDeleteScope = "single"): Promise<void> {
+    const existing = await this.getById(id);
+    if (!existing) throw new Error("Ders bulunamadı");
+
+    if (
+      scope === "future" &&
+      existing.recurrence_group_id &&
+      existing.recurrence !== "none"
+    ) {
+      const all = await this.getAll(existing.studio_id);
+      const targets = all.filter(
+        (l) =>
+          l.recurrence_group_id === existing.recurrence_group_id &&
+          l.date >= existing.date
+      );
+
+      for (const lesson of targets) {
+        await this.softDeleteOne(lesson);
+      }
+      return;
+    }
+
+    await this.softDeleteOne(existing);
   }
 }

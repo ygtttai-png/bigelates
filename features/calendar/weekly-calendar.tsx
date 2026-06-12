@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { LessonDeleteButton } from "@/components/features/lessons/lesson-delete-button";
 import { LessonRow } from "@/components/features/lessons/lesson-row";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,8 +12,8 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { useApp } from "@/components/providers/app-provider";
 import { fmtMoney, fmtMoneyShort } from "@/utils/currency";
-import { TR_DAYS, TR_DAYS_SHORT, TR_MONTHS, addDays, isSameDay, startOfWeek, today } from "@/utils/date";
-import { earnedFee, lessonsOn } from "@/utils/lessons";
+import { TR_DAYS, TR_DAYS_SHORT, TR_MONTHS, addDays, isSameDay, startOfWeek, today, ymd } from "@/utils/date";
+import { earnedFee, lessonsOn, newLessonPath } from "@/utils/lessons";
 import type { Lesson } from "@/types";
 
 type ViewMode = "columns" | "timegrid" | "agenda";
@@ -112,31 +113,50 @@ function ColumnsView({
       <div className="min-w-[720px]">
         <div className="mb-2.5 grid grid-cols-7 gap-2">
           {days.map((d, i) => (
-            <div key={i} className={`rounded-xl py-2 text-center ${isSameDay(d, TODAY) ? "bg-[var(--accent-soft)]" : ""}`}>
+            <Link
+              key={i}
+              href={newLessonPath(ymd(d))}
+              className={`rounded-xl py-2 text-center transition-colors hover:bg-[var(--surface-2)] ${isSameDay(d, TODAY) ? "bg-[var(--accent-soft)]" : ""}`}
+            >
               <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--ink-2)]">{TR_DAYS_SHORT[i]}</div>
               <div className={`tnum mt-0.5 text-[19px] font-bold ${isSameDay(d, TODAY) ? "text-[var(--accent-ink)]" : ""}`}>{d.getDate()}</div>
-            </div>
+            </Link>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-2">
           {byDay.map((ls, i) => (
-            <div key={i} className={`flex min-h-[60px] min-w-0 flex-col gap-1.5 rounded-[14px] p-2 ${isSameDay(days[i]!, TODAY) ? "bg-[var(--accent-soft)]" : "bg-[var(--surface-2)]"}`}>
-              {ls.length === 0 && <div className="py-2 text-center text-[11px] text-[var(--ink-3)]">—</div>}
+            <div key={i} className={`relative flex min-h-[60px] min-w-0 flex-col gap-1.5 rounded-[14px] p-2 ${isSameDay(days[i]!, TODAY) ? "bg-[var(--accent-soft)]" : "bg-[var(--surface-2)]"}`}>
+              <Link
+                href={newLessonPath(ymd(days[i]!))}
+                className="absolute inset-0 z-0 rounded-[14px]"
+                aria-label={`${ymd(days[i]!)} tarihine ders ekle`}
+              />
+              {ls.length === 0 && (
+                <div className="relative z-[1] flex flex-1 items-center justify-center py-2 text-[11px] text-[var(--ink-3)]">
+                  + Ders ekle
+                </div>
+              )}
               {ls.map((l) => (
                 <Link
                   key={l.id}
                   href={`/lessons/${l.id}/edit`}
-                  className={`relative cursor-pointer rounded-[10px] border border-transparent bg-[var(--surface)] py-2 pl-3 pr-2.5 text-xs shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)] before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[3px] before:rounded ${l.type === "ozel" ? "before:bg-[var(--sage)]" : "before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""} ${l.status === "iptal" ? "opacity-55" : ""}`}
+                  className={`relative z-[1] cursor-pointer rounded-[10px] border border-transparent bg-[var(--surface)] py-2 pl-3 pr-2.5 text-xs shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)] before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[3px] before:rounded ${l.type === "ozel" ? "before:bg-[var(--sage)]" : "before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""} ${l.status === "iptal" ? "opacity-55" : ""}`}
                 >
                   <div className="tnum text-[11.5px] font-bold">{l.time.slice(0, 5)}</div>
                   <div className={`truncate text-xs font-semibold ${l.status === "iptal" ? "line-through" : ""}`}>
                     {blockLabel(l, studentById)}
                   </div>
-                  <div className="mt-1 flex justify-between">
+                  <div className="mt-1 flex items-center justify-between gap-1">
                     <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${l.type === "ozel" ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]" : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"}`}>
                       {l.type === "ozel" ? "Özel" : "Grup"}
                     </span>
-                    <span className="tnum text-[11px]">{fmtMoneyShort(Number(l.fee))}</span>
+                    <div className="flex items-center gap-0.5">
+                      <span className="tnum text-[11px]">{fmtMoneyShort(Number(l.fee))}</span>
+                      <LessonDeleteButton
+                        lessonId={l.id}
+                        className="h-6 w-6 shrink-0"
+                      />
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -174,10 +194,14 @@ function TimeGridView({
         <div className="grid min-w-[680px] grid-cols-[48px_repeat(7,1fr)] gap-2">
           <div />
           {days.map((d, i) => (
-            <div key={i} className={`mb-1 rounded-xl py-2 text-center ${isSameDay(d, TODAY) ? "bg-[var(--accent-soft)]" : ""}`}>
+            <Link
+              key={i}
+              href={newLessonPath(ymd(d))}
+              className={`mb-1 rounded-xl py-2 text-center transition-colors hover:bg-[var(--surface-2)] ${isSameDay(d, TODAY) ? "bg-[var(--accent-soft)]" : ""}`}
+            >
               <div className="text-[11.5px] font-semibold uppercase text-[var(--ink-2)]">{TR_DAYS_SHORT[i]}</div>
               <div className="tnum text-base font-bold">{d.getDate()}</div>
-            </div>
+            </Link>
           ))}
           <div>
             {hours.map((h) => (
@@ -188,19 +212,28 @@ function TimeGridView({
           </div>
           {byDay.map((ls, di) => (
             <div key={di} className="relative">
+              <Link
+                href={newLessonPath(ymd(days[di]!))}
+                className="absolute inset-0 z-0"
+                aria-label={`${ymd(days[di]!)} tarihine ders ekle`}
+              />
               {hours.map((h) => (
-                <div key={h} className="h-14 border-t border-[var(--line-2)]" />
+                <div key={h} className="relative z-[1] h-14 border-t border-[var(--line-2)]" />
               ))}
               {ls.filter((l) => l.status !== "iptal").map((l) => (
-                <Link
+                <div
                   key={l.id}
-                  href={`/lessons/${l.id}/edit`}
-                  className={`absolute left-[3px] right-[3px] overflow-hidden rounded-[9px] px-2 py-1 pl-[11px] text-[11.5px] shadow-[var(--shadow-sm)] before:absolute before:bottom-1 before:left-0 before:top-1 before:w-[3px] before:rounded ${l.type === "ozel" ? "bg-[var(--sage-soft)] before:bg-[var(--sage)]" : "bg-[var(--plum-soft)] before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""}`}
+                  className={`group absolute left-[3px] right-[3px] z-[2] overflow-hidden rounded-[9px] px-2 py-1 pl-[11px] text-[11.5px] shadow-[var(--shadow-sm)] before:absolute before:bottom-1 before:left-0 before:top-1 before:w-[3px] before:rounded ${l.type === "ozel" ? "bg-[var(--sage-soft)] before:bg-[var(--sage)]" : "bg-[var(--plum-soft)] before:bg-[var(--plum)]"} ${l.status === "gelmedi" ? "bg-[var(--rose-soft)]" : ""}`}
                   style={{ top: topFor(l.time.slice(0, 5)) + 2, height: ROW - 6 }}
                 >
-                  <div className="tnum font-bold">{l.time.slice(0, 5)}</div>
-                  <div className="truncate">{blockLabel(l, studentById)}</div>
-                </Link>
+                  <Link href={`/lessons/${l.id}/edit`} className="block pr-6">
+                    <div className="tnum font-bold">{l.time.slice(0, 5)}</div>
+                    <div className="truncate">{blockLabel(l, studentById)}</div>
+                  </Link>
+                  <div className="absolute right-1 top-1">
+                    <LessonDeleteButton lessonId={l.id} className="h-5 w-5 opacity-80" />
+                  </div>
+                </div>
               ))}
             </div>
           ))}

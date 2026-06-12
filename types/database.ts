@@ -1,6 +1,7 @@
 export type UserRole = "admin" | "staff" | "user";
 export type LessonType = "ozel" | "grup";
 export type LessonStatus = "planlandi" | "geldi" | "gelmedi" | "iptal";
+export type LessonRecurrence = "none" | "weekly" | "monthly";
 export type PaymentStatus = "odendi" | "bekliyor";
 
 export interface Profile {
@@ -60,6 +61,8 @@ export interface Lesson {
   status: LessonStatus;
   fee: number;
   note: string | null;
+  recurrence: LessonRecurrence;
+  recurrence_group_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -141,6 +144,8 @@ export type Database = {
           status?: LessonStatus;
           fee?: number;
           note?: string | null;
+          recurrence?: LessonRecurrence;
+          recurrence_group_id?: string | null;
         };
         Update: Partial<Omit<Lesson, "id" | "created_at">>;
         Relationships: [];

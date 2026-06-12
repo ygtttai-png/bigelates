@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { LoadingState } from "@/components/ui/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { useApp } from "@/components/providers/app-provider";
+import { useToast } from "@/components/providers/toast-provider";
 import { StudentFormDialog } from "@/features/students/student-form-dialog";
 import { PAY_LABEL } from "@/utils/lessons";
 import type { Lesson, Student } from "@/types";
@@ -27,10 +28,12 @@ function studentStats(lessons: Lesson[], id: string) {
 type FilterKey = "all" | "ozel" | "grup" | "bekliyor";
 
 export function StudentsList() {
-  const { students, lessons, loading, error } = useApp();
+  const { students, lessons, loading, error, deleteStudent } = useApp();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [formOpen, setFormOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   const rows = useMemo(
     () =>
@@ -52,6 +55,35 @@ export function StudentsList() {
 
   const pending = students.filter((s) => s.payment_status === "bekliyor").length;
 
+  const openCreate = () => {
+    setEditingStudent(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (student: Student) => {
+    setEditingStudent(student);
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingStudent(null);
+  };
+
+  const handleDelete = async (student: Student) => {
+    if (!window.confirm(`${student.name} silinsin mi? Bu işlem geri alınamaz.`)) return;
+
+    try {
+      await deleteStudent(student.id);
+      toast("Öğrenci silindi", { tone: "rose", icon: "trash" });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Silme başarısız", {
+        tone: "rose",
+        icon: "x",
+      });
+    }
+  };
+
   if (loading) return <LoadingState />;
   if (error) return <EmptyState icon="x" message={error} />;
 
@@ -61,7 +93,7 @@ export function StudentsList() {
         eyebrow={`${students.length} öğrenci · ${pending} ödeme bekliyor`}
         title="Öğrenciler"
         action={
-          <Button onClick={() => setFormOpen(true)} className="hidden lg:inline-flex">
+          <Button onClick={openCreate} className="hidden lg:inline-flex">
             <Icon name="plus" />
             Öğrenci Ekle
           </Button>
@@ -79,7 +111,7 @@ export function StudentsList() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={() => setFormOpen(true)} className="lg:hidden">
+          <Button size="sm" onClick={openCreate} className="lg:hidden">
             <Icon name="plus" size={16} />
             Ekle
           </Button>
@@ -111,18 +143,23 @@ export function StudentsList() {
 
       <Card className="overflow-hidden">
         <div className="hidden border-b border-[var(--line)] px-[18px] py-3 lg:grid lg:grid-cols-[2.2fr_1.3fr_1fr_1fr_auto] lg:gap-3.5">
-          {["Öğrenci", "Ders tipi", "Kalan paket", "Ödeme", ""].map((h) => (
+          {["Öğrenci", "Ders tipi", "Kalan paket", "Ödeme", "İşlem"].map((h) => (
             <span key={h} className="text-[11.5px] font-semibold uppercase tracking-wide text-[var(--ink-3)]">
               {h}
             </span>
           ))}
         </div>
         {rows.map(({ s }) => (
-          <StudentRow key={s.id} student={s} />
+          <StudentRow
+            key={s.id}
+            student={s}
+            onEdit={() => openEdit(s)}
+            onDelete={() => void handleDelete(s)}
+          />
         ))}
         {rows.length === 0 && students.length === 0 && (
           <EmptyState icon="users" message="Henüz öğrenci yok.">
-            <Button onClick={() => setFormOpen(true)}>
+            <Button onClick={openCreate}>
               <Icon name="plus" />
               İlk öğrenciyi ekle
             </Button>
@@ -133,24 +170,33 @@ export function StudentsList() {
         )}
       </Card>
 
-      <StudentFormDialog open={formOpen} onClose={() => setFormOpen(false)} />
+      <StudentFormDialog
+        open={formOpen}
+        onClose={closeForm}
+        student={editingStudent}
+      />
     </>
   );
 }
 
-function StudentRow({ student: s }: { student: Student }) {
+function StudentRow({
+  student: s,
+  onEdit,
+  onDelete,
+}: {
+  student: Student;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <Link
-      href={`/students/${s.id}`}
-      className="grid grid-cols-[1fr_auto] items-center gap-3.5 border-b border-[var(--line-2)] px-[18px] py-3.5 transition-colors last:border-b-0 hover:bg-[var(--surface-2)] lg:grid-cols-[2.2fr_1.3fr_1fr_1fr_auto]"
-    >
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="grid grid-cols-[1fr_auto] items-center gap-3.5 border-b border-[var(--line-2)] px-[18px] py-3.5 transition-colors last:border-b-0 hover:bg-[var(--surface-2)] lg:grid-cols-[2.2fr_1.3fr_1fr_1fr_auto]">
+      <Link href={`/students/${s.id}`} className="flex min-w-0 items-center gap-3">
         <Avatar student={s} size={42} />
         <div className="min-w-0">
           <div className="text-[14.5px] font-semibold">{s.name}</div>
           <div className="tnum text-[12.5px] text-[var(--ink-2)]">{s.phone}</div>
         </div>
-      </div>
+      </Link>
       <div className="hidden lg:block">
         <span className={`rounded-[7px] px-2 py-0.5 text-[11px] font-bold uppercase ${s.type === "ozel" ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]" : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"}`}>
           {s.type === "ozel" ? "Özel" : "Grup"}
@@ -182,8 +228,30 @@ function StudentRow({ student: s }: { student: Student }) {
             {s.remaining} ders
           </Badge>
         </span>
-        <Icon name="chevronR" size={18} className="text-[var(--ink-3)]" />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9"
+          title="Düzenle"
+          onClick={onEdit}
+        >
+          <Icon name="edit" size={16} />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 text-[var(--rose-ink)]"
+          title="Sil"
+          onClick={onDelete}
+        >
+          <Icon name="trash" size={16} />
+        </Button>
+        <Link href={`/students/${s.id}`} className="hidden text-[var(--ink-3)] lg:inline-flex">
+          <Icon name="chevronR" size={18} />
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }

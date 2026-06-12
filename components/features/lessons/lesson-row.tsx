@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LessonDeleteButton } from "@/components/features/lessons/lesson-delete-button";
 import { Avatar, AvatarStack } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { fmtMoney } from "@/utils/currency";
 import type { Lesson } from "@/types";
 import { cn } from "@/lib/utils";
+import { RECURRENCE_LABELS } from "@/utils/recurrence";
 
 interface LessonRowProps {
   lesson: Lesson;
@@ -91,6 +93,15 @@ export function LessonRow({ lesson, compact }: LessonRowProps) {
           >
             {lesson.type === "ozel" ? "Özel" : "Grup"}
           </span>
+          {lesson.recurrence !== "none" && (
+            <span
+              className="inline-flex items-center gap-0.5 rounded-[7px] bg-[var(--surface-3)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-3)]"
+              title={RECURRENCE_LABELS[lesson.recurrence]}
+            >
+              <Icon name="repeat" size={10} />
+              {lesson.recurrence === "weekly" ? "Haftalık" : "Aylık"}
+            </span>
+          )}
         </div>
         <div className="mt-0.5 truncate text-[12.5px] text-[var(--ink-2)]">{sub}</div>
       </div>
@@ -116,9 +127,13 @@ export function LessonRow({ lesson, compact }: LessonRowProps) {
             >
               <Icon name="x" size={17} stroke={2.2} />
             </Button>
+            <LessonDeleteButton lessonId={lesson.id} />
           </div>
         ) : (
-          <StatusPill status={lesson.status} size="sm" />
+          <div className="flex items-center gap-1.5">
+            <StatusPill status={lesson.status} size="sm" />
+            <LessonDeleteButton lessonId={lesson.id} />
+          </div>
         )}
       </div>
     </Link>

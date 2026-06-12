@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,25 +9,40 @@ import { Icon } from "@/components/ui/icon";
 import { LoadingState } from "@/components/ui/loading-state";
 import { useApp } from "@/components/providers/app-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { LessonDeleteButton } from "@/components/features/lessons/lesson-delete-button";
 import { lessonSchema } from "@/lib/validations/lesson";
 import { fmtMoney } from "@/utils/currency";
 import { today, ymd } from "@/utils/date";
 import { DEFAULT_PRICE_GRUP, DEFAULT_PRICE_OZEL, TIME_OPTIONS } from "@/utils/lessons";
+import {
+  RECURRENCE_COUNTS,
+  RECURRENCE_LABELS,
+  type LessonRecurrence,
+} from "@/utils/recurrence";
 
 interface LessonFormProps {
   lessonId?: string;
 }
 
+function resolveInitialDate(editingDate?: string, queryDate?: string | null): string {
+  if (editingDate) return editingDate;
+  if (queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate)) return queryDate;
+  return ymd(today());
+}
+
 export function LessonForm({ lessonId }: LessonFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
-  const { lessons, students, studio, loading, createLesson, updateLesson, deleteLesson } = useApp();
+  const { lessons, students, studio, loading, createLesson, updateLesson } = useApp();
 
   const editing = lessonId ? lessons.find((l) => l.id === lessonId) : null;
   const PRICE_OZEL = studio?.settings?.price_ozel ?? DEFAULT_PRICE_OZEL;
   const PRICE_GRUP = studio?.settings?.price_grup ?? DEFAULT_PRICE_GRUP;
 
-  const [date, setDate] = useState(editing?.date ?? ymd(today()));
+  const [date, setDate] = useState(() =>
+    resolveInitialDate(editing?.date, searchParams.get("date"))
+  );
   const [time, setTime] = useState(editing?.time?.slice(0, 5) ?? "09:00");
   const [type, setType] = useState<"ozel" | "grup">(editing?.type ?? "ozel");
   const [ids, setIds] = useState<string[]>(editing?.student_ids ?? []);
@@ -35,6 +50,7 @@ export function LessonForm({ lessonId }: LessonFormProps) {
   const [feeEdited, setFeeEdited] = useState(!!editing);
   const [status, setStatus] = useState(editing?.status ?? "planlandi");
   const [note, setNote] = useState(editing?.note ?? "");
+  const [recurrence, setRecurrence] = useState<LessonRecurrence>("none");
   const [search, setSearch] = useState("");
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
@@ -68,6 +84,7 @@ export function LessonForm({ lessonId }: LessonFormProps) {
       fee: Number(fee),
       status,
       note: note || null,
+      recurrence: editing ? "none" : recurrence,
     };
 
     const parsed = lessonSchema.safeParse(payload);
@@ -89,7 +106,18 @@ export function LessonForm({ lessonId }: LessonFormProps) {
         toast("Ders güncellendi", { tone: "green", icon: "check" });
       } else {
         await createLesson(parsed.data);
-        toast("Ders eklendi · Kaydedildi", { tone: "green", icon: "check" });
+        const count =
+          parsed.data.recurrence === "weekly"
+            ? RECURRENCE_COUNTS.weekly
+            : parsed.data.recurrence === "monthly"
+              ? RECURRENCE_COUNTS.monthly
+              : 1;
+        toast(
+          count > 1
+            ? `${count} ders planlandı · ${RECURRENCE_LABELS[parsed.data.recurrence]}`
+            : "Ders eklendi · Kaydedildi",
+          { tone: "green", icon: "check" }
+        );
       }
       router.push("/calendar/weekly");
     } catch {
@@ -99,19 +127,8 @@ export function LessonForm({ lessonId }: LessonFormProps) {
     }
   };
 
-  const remove = async () => {
-    if (!editing) return;
-    setSaving(true);
-    try {
-      await deleteLesson(editing.id);
-      toast("Ders silindi", { tone: "rose", icon: "trash" });
-      router.push("/calendar/weekly");
-    } catch {
-      toast("Silme başarısız", { tone: "rose", icon: "x" });
-    } finally {
-      setSaving(false);
-    }
-  };
+  const isRecurringLesson =
+    editing?.recurrence !== "none" && !!editing?.recurrence_group_id;
 
   if (loading) return <LoadingState />;
 
@@ -161,6 +178,40 @@ export function LessonForm({ lessonId }: LessonFormProps) {
             </select>
           </div>
         </div>
+
+        {!editing ? (
+          <div className="mb-4">
+            <label className="mb-1.5 block text-[13px] font-semibold text-[var(--ink-2)]">Tekrar</label>
+            <div className="flex gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-1">
+              {(["none", "weekly", "monthly"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={`flex-1 rounded-[9px] px-3 py-2 text-[13.5px] font-semibold transition-all ${
+                    recurrence === r
+                      ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow-sm)]"
+                      : "text-[var(--ink-2)]"
+                  }`}
+                  onClick={() => setRecurrence(r)}
+                >
+                  {RECURRENCE_LABELS[r]}
+                </button>
+              ))}
+            </div>
+            {recurrence !== "none" && (
+              <p className="mt-1.5 text-xs text-[var(--ink-3)]">
+                Aynı saat ve öğrencilerle {RECURRENCE_COUNTS[recurrence]} ders otomatik planlanır.
+              </p>
+            )}
+          </div>
+        ) : isRecurringLesson ? (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5 text-sm text-[var(--ink-2)]">
+            <Icon name="repeat" size={16} className="text-[var(--accent-ink)]" />
+            <span>
+              Bu ders <strong>{RECURRENCE_LABELS[editing.recurrence]}</strong> tekrar eden serinin parçası.
+            </span>
+          </div>
+        ) : null}
 
         <div className="mb-4">
           <label className="mb-1.5 block text-[13px] font-semibold text-[var(--ink-2)]">
@@ -228,9 +279,24 @@ export function LessonForm({ lessonId }: LessonFormProps) {
 
       <div className="mt-4 flex justify-between">
         {editing ? (
-          <Button variant="danger" onClick={() => void remove()} disabled={saving}>
-            <Icon name="trash" /> Sil
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <LessonDeleteButton
+              lessonId={editing.id}
+              scope="single"
+              size="sm"
+              label="Bu dersi sil"
+              redirectTo="/calendar/weekly"
+            />
+            {isRecurringLesson && (
+              <LessonDeleteButton
+                lessonId={editing.id}
+                scope="future"
+                size="sm"
+                label="Bu ve sonrakileri sil"
+                redirectTo="/calendar/weekly"
+              />
+            )}
+          </div>
         ) : (
           <span />
         )}

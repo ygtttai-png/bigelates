@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useApp } from "@/components/providers/app-provider";
 import { fmtMoney } from "@/utils/currency";
 import { TR_DAYS_SHORT, TR_MONTHS, addDays, isSameDay, today, ymd } from "@/utils/date";
-import { earnedFee, lessonsInRange } from "@/utils/lessons";
+import { earnedFee, lessonsInRange, newLessonPath } from "@/utils/lessons";
 
 export function MonthlyCalendar() {
   const { lessons, loading } = useApp();
@@ -111,7 +111,7 @@ export function MonthlyCalendar() {
             return (
               <Link
                 key={i}
-                href={ls.length ? "/calendar/weekly" : "#"}
+                href={newLessonPath(ymd(d))}
                 className={`flex aspect-[1/0.92] flex-col rounded-[13px] border border-[var(--line)] bg-[var(--surface)] p-2 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow)] ${isToday ? "border-[var(--accent)] shadow-[0_0_0_1px_var(--accent)]" : ""}`}
               >
                 <div className="flex justify-between">

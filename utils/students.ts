@@ -17,7 +17,7 @@ export const DEFAULT_PACKAGE_BY_TYPE = {
 
 export const PACKAGE_OPTIONS = {
   ozel: [4, 8, 10, 12],
-  grup: [8, 12, 16, 20],
+  grup: [4, 8, 12, 16, 20],
 } as const;
 
 export function studentInitials(name: string): string {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LessonsService } from "@/services/lessons.service";
 import type { Lesson, LessonStatus } from "@/types";
-import type { LessonInput } from "@/lib/validations/lesson";
+import type { LessonDeleteScope, LessonInput } from "@/lib/validations/lesson";
 
 interface UseLessonsOptions {
   studioId: string | null;
@@ -82,10 +82,10 @@ export function useLessons({ studioId }: UseLessonsOptions) {
       const supabase = createClient();
       const service = new LessonsService(supabase);
       const created = await service.create(studioId, input);
-      setLessons((ls) => [...ls, created]);
+      await fetchLessons();
       return created;
     },
-    [studioId]
+    [studioId, fetchLessons]
   );
 
   const updateLesson = useCallback(async (id: string, input: LessonInput) => {
@@ -96,12 +96,15 @@ export function useLessons({ studioId }: UseLessonsOptions) {
     return updated;
   }, []);
 
-  const deleteLesson = useCallback(async (id: string) => {
-    const supabase = createClient();
-    const service = new LessonsService(supabase);
-    await service.softDelete(id);
-    setLessons((ls) => ls.filter((l) => l.id !== id));
-  }, []);
+  const deleteLesson = useCallback(
+    async (id: string, scope: LessonDeleteScope = "single") => {
+      const supabase = createClient();
+      const service = new LessonsService(supabase);
+      await service.softDelete(id, scope);
+      await fetchLessons();
+    },
+    [fetchLessons]
+  );
 
   return {
     lessons,

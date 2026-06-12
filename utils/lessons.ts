@@ -66,11 +66,16 @@ export function resolveLessonStatus(
 export const TIME_OPTIONS: string[] = (() => {
   const options: string[] = [];
   for (let h = 7; h <= 21; h++) {
-    options.push(`${String(h).padStart(2, "0")}:00`);
-    options.push(`${String(h).padStart(2, "0")}:30`);
+    for (const m of [0, 15, 30, 45]) {
+      options.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
   }
   return options;
 })();
 
 export const DEFAULT_PRICE_OZEL = 750;
-export const DEFAULT_PRICE_GRUP = 200;
+export const DEFAULT_PRICE_GRUP = 250;
+
+export function newLessonPath(date: string): string {
+  return `/lessons/new?date=${date}`;
+}

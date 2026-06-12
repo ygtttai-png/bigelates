@@ -79,7 +79,7 @@ export function StudentDetail({ studentId }: StudentDetailProps) {
             </div>
           </div>
         </div>
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setEditOpen(true)}>
             <Icon name="edit" /> Düzenle
           </Button>
