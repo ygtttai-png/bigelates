@@ -244,13 +244,11 @@ export class LessonsService {
     await this.refundPackageCredits(targets);
 
     const ids = targets.map((l) => l.id);
-    const { data: deleted, error: deleteError } = await this.supabase
+    const { error: deleteError } = await this.supabase
       .from("lessons")
       .update({ deleted_at: new Date().toISOString() })
-      .in("id", ids)
-      .select("id");
+      .in("id", ids);
 
     if (deleteError) throw new Error(deleteError.message);
-    if (!deleted?.length) throw new Error("Ders silinemedi — yetki hatası olabilir");
   }
 }
