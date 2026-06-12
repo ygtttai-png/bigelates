@@ -244,11 +244,14 @@ export class LessonsService {
     await this.refundPackageCredits(targets);
 
     const ids = targets.map((l) => l.id);
-    const { error: deleteError } = await this.supabase
-      .from("lessons")
-      .update({ deleted_at: new Date().toISOString() })
-      .in("id", ids);
+    const { data: deletedCount, error: deleteError } = await this.supabase.rpc(
+      "soft_delete_lessons",
+      { p_lesson_ids: ids }
+    );
 
     if (deleteError) throw new Error(deleteError.message);
+    if (!deletedCount || deletedCount < 1) {
+      throw new Error("Ders silinemedi — yetki veya stüdyo eşleşmesi hatası");
+    }
   }
 }

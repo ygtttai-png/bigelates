@@ -174,7 +174,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      soft_delete_lessons: {
+        Args: { p_lesson_ids: string[] };
+        Returns: number;
+      };
+    };
     Enums: {
       user_role: UserRole;
       lesson_type: LessonType;
