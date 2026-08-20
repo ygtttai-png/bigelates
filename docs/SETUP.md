@@ -28,6 +28,11 @@ Supabase Dashboard → **SQL Editor**'da **sırayla** çalıştırın (her dosya
 1. `supabase/migrations/20250609000001_initial_schema.sql` — tablolar
 2. `supabase/migrations/20250609000002_rls_policies.sql` — güvenlik politikaları
 3. `supabase/migrations/20250609000003_seed_data.sql` — (isteğe bağlı) demo veri
+4. `supabase/migrations/20250609000004_lesson_recurrence.sql` — tekrar eden dersler
+5. `supabase/migrations/20250609000005_fix_lesson_delete_rls.sql`
+6. `supabase/migrations/20250609000006_soft_delete_lessons_rpc.sql`
+7. `supabase/migrations/20250609000007_lesson_types.sql` — ayarlardan ders tipleri
+8. `supabase/migrations/20250609000008_push_notifications.sql` — bildirim altyapısı
 
 > Migration'lar **idempotent**'tir; hata aldıysanız aynı dosyayı tekrar çalıştırabilirsiniz.
 > `user_role already exists` veya `studios does not exist` hatası aldıysanız: önce **01**, sonra **02** dosyasını tekrar çalıştırın.
@@ -82,6 +87,14 @@ SELECT seed_studio_data('<your-studio-id>');
 ```
 
 > **Not:** `seed_studio_data` yalnızca örnek veri ekler (Örnek Öğrenci 1–5, sahte telefonlar `0500 000 00 XX`, örnek ücretler). Gerçek kişi bilgisi içermez. Tüm kayıtlar panelden düzenlenir veya silinir.
+
+## 8. Bildirimler
+
+Uygulama kapalıyken bildirim düşmesi için Web Push kurulumu gerekir —
+adımlar ve sorun giderme: [NOTIFICATIONS.md](./NOTIFICATIONS.md).
+
+Kısaca: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` ortam değişkeni (Vercel'de de), Vault'ta
+VAPID gizli anahtarı, `notify` edge function'ı ve `bigelates-notify` cron işi.
 
 ## Roller
 

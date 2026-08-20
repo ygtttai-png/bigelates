@@ -108,6 +108,45 @@ export interface Payment {
   deleted_at: string | null;
 }
 
+/** Bir cihazın push adresi — uygulama kapalıyken bildirim buraya gider */
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  studio_id: string | null;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  enabled: boolean;
+  failure_count: number;
+  last_success_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationPrefs {
+  user_id: string;
+  enabled: boolean;
+  /** Ders başlamadan kaç dakika önce hatırlatılsın */
+  reminder_minutes: number;
+  /** "Yarın şu kadar dersin var" özetinin yerel saati (0-23) */
+  summary_hour: number;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationDelivery {
+  id: string;
+  user_id: string;
+  kind: string;
+  dedupe_key: string;
+  title: string;
+  body: string;
+  sent_at: string;
+  delivered_count: number;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -204,6 +243,44 @@ export type Database = {
           payment_date?: string;
         };
         Update: Partial<Omit<Payment, "id" | "created_at">>;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        Insert: {
+          user_id: string;
+          studio_id?: string | null;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          enabled?: boolean;
+        };
+        Update: Partial<Omit<PushSubscriptionRow, "id" | "created_at">>;
+        Relationships: [];
+      };
+      notification_prefs: {
+        Row: NotificationPrefs;
+        Insert: {
+          user_id: string;
+          enabled?: boolean;
+          reminder_minutes?: number;
+          summary_hour?: number;
+          timezone?: string;
+        };
+        Update: Partial<Omit<NotificationPrefs, "user_id" | "created_at">>;
+        Relationships: [];
+      };
+      notification_deliveries: {
+        Row: NotificationDelivery;
+        Insert: {
+          user_id: string;
+          kind: string;
+          dedupe_key: string;
+          title: string;
+          body: string;
+        };
+        Update: Partial<Omit<NotificationDelivery, "id">>;
         Relationships: [];
       };
     };

@@ -1,46 +1,70 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useApp } from "@/components/providers/app-provider";
-import { useLessonNotifications } from "@/hooks/use-lesson-notifications";
-import {
-  areNotificationsEnabled,
-  setNotificationsEnabled,
-} from "@/lib/notifications/lesson-notifications";
+import { useToast } from "@/components/providers/toast-provider";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 
+const DISMISS_KEY = "bigelates:push-prompt-dismissed";
+
+/**
+ * Bu cihaz henüz push bildirimlerine kayıtlı değilse kısa bir davet gösterir.
+ * Kayıt sunucuya yazıldığı için uygulama kapalıyken de bildirim düşer.
+ */
 export function NotificationManager() {
-  const { lessons } = useApp();
-  const [dismissed, setDismissed] = React.useState(false);
-  const [enabled, setEnabled] = React.useState(true);
+  const { profile } = useApp();
+  const toast = useToast();
+  const [dismissed, setDismissed] = React.useState(true);
 
-  React.useEffect(() => {
-    setEnabled(areNotificationsEnabled());
-  }, []);
-
-  const { supported, permission, enableNotifications } = useLessonNotifications({
-    lessons,
-    enabled,
+  const push = usePushNotifications({
+    userId: profile?.id ?? null,
+    studioId: profile?.studio_id ?? null,
   });
 
-  const showPrompt =
-    supported &&
-    enabled &&
-    permission === "default" &&
-    !dismissed;
+  React.useEffect(() => {
+    setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
+  }, []);
+
+  // Tarayıcı aboneliği yenilerse kaydı sessizce tazele
+  const enable = push.enable;
+  React.useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "PUSH_SUBSCRIPTION_CHANGED") return;
+      if (Notification.permission === "granted") void enable().catch(() => {});
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [enable]);
+
+  const canEnableHere =
+    push.supported &&
+    push.configured &&
+    !push.needsInstall &&
+    push.permission !== "denied" &&
+    !push.subscribedHere;
+
+  const showPrompt = !push.loading && !dismissed && !!profile && canEnableHere;
 
   const handleEnable = async () => {
-    const result = await enableNotifications();
-    if (result === "granted") {
+    try {
+      await push.enable();
+      toast("Bildirimler açıldı", { tone: "green", icon: "check" });
       setDismissed(true);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Bildirimler açılamadı", {
+        tone: "rose",
+        icon: "x",
+      });
     }
   };
 
   const handleDismiss = () => {
+    localStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
-    setNotificationsEnabled(false);
-    setEnabled(false);
   };
 
   if (!showPrompt) return null;
@@ -54,14 +78,18 @@ export function NotificationManager() {
         <div className="flex-1">
           <p className="font-semibold">Ders bildirimleri</p>
           <p className="mt-1 text-sm text-[var(--ink-2)]">
-            Yarınki ders özetini ve ders başlamadan 30 dakika önce hatırlatma al.
+            Uygulama kapalıyken bile telefonuna düşsün: ders başlamadan önce hatırlatma ve akşam
+            yarının ders özeti.
           </p>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={() => void handleEnable()}>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => void handleEnable()} disabled={push.busy}>
               Bildirimleri Aç
             </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/notifications">Ayarlar</Link>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleDismiss}>
-              Kapat
+              Şimdi değil
             </Button>
           </div>
         </div>
