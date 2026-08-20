@@ -7,6 +7,7 @@ import {
   getExistingSubscription,
   isPushSupported,
   needsHomeScreenInstall,
+  resetServiceWorker,
   subscribeToPush,
   unsubscribeFromPush,
   VAPID_PUBLIC_KEY,
@@ -98,6 +99,28 @@ export function usePushNotifications({ userId, studioId }: UsePushNotificationsO
     }
   }, [userId, studioId, refresh]);
 
+  /** Bozuk kurulumu temizleyip bildirimleri baştan açar */
+  const resetAndEnable = useCallback(async () => {
+    if (!userId) throw new Error("Önce giriş yapmalısın");
+    setBusy(true);
+    try {
+      const ok = await resetServiceWorker();
+      if (!ok) {
+        throw new Error(
+          "Service worker sıfırlandı ama hazır olmadı. Sayfayı kapatıp yeniden aç."
+        );
+      }
+      const keys = await subscribeToPush();
+      const service = new NotificationsService(createClient());
+      await service.saveSubscription(userId, studioId, keys);
+      if (typeof Notification !== "undefined") setPermission(Notification.permission);
+      await refresh();
+      return keys;
+    } finally {
+      setBusy(false);
+    }
+  }, [userId, studioId, refresh]);
+
   const disable = useCallback(async () => {
     setBusy(true);
     try {
@@ -168,6 +191,7 @@ export function usePushNotifications({ userId, studioId }: UsePushNotificationsO
     loading,
     busy,
     enable,
+    resetAndEnable,
     disable,
     removeDevice,
     savePrefs,

@@ -188,6 +188,26 @@ export async function subscribeToPush(): Promise<PushSubscriptionKeys> {
   return toKeys(subscription);
 }
 
+/**
+ * Takılmış bir service worker kurulumunu temizler: tüm kayıtları siler,
+ * önbellekleri boşaltır ve sıfırdan kaydeder.
+ * Eski/bozuk bir kurulum yüzünden "hazır değil" hatası alındığında kullanılır.
+ */
+export async function resetServiceWorker(): Promise<boolean> {
+  if (!("serviceWorker" in navigator)) return false;
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((r) => r.unregister().catch(() => false)));
+
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k).catch(() => false)));
+  }
+
+  const fresh = await readyRegistration();
+  return !!fresh?.active;
+}
+
 /** Tarayıcı tarafındaki aboneliği iptal eder; endpoint'i döner */
 export async function unsubscribeFromPush(): Promise<string | null> {
   const registration = await readyRegistration();

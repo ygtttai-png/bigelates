@@ -14,6 +14,8 @@ export const config = {
     // sw.js'in importScripts ile çektiği worker-*/fallback-* dosyaları da muaf
     // olmalı; aksi halde giriş yapılmamışken /login'e yönlenir ve service
     // worker kurulumu (dolayısıyla push bildirimleri) başarısız olur.
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*|worker-.*|fallback-.*|offline).*)",
+    // _next altındaki her şey muaf: yalnız static/image değil, build manifest
+    // gibi dosyalar da service worker tarafından indiriliyor.
+    "/((?!_next|favicon.ico|icons|manifest.json|sw.js|workbox-.*|worker-.*|fallback-.*|offline).*)",
   ],
 };

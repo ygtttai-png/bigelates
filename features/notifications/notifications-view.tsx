@@ -70,6 +70,18 @@ export function NotificationsView() {
     }
   };
 
+  const handleReset = async () => {
+    try {
+      await push.resetAndEnable();
+      toast("Sıfırlandı · bildirimler açıldı", { tone: "green", icon: "check" });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Sıfırlanamadı", {
+        tone: "rose",
+        icon: "x",
+      });
+    }
+  };
+
   const handleDisable = async () => {
     try {
       await push.disable();
@@ -182,6 +194,25 @@ export function NotificationsView() {
             <Icon name="spark" size={17} /> Test bildirimi gönder
           </Button>
         </div>
+
+        {push.supported && push.configured && (
+          <div className="mt-3 border-t border-[var(--line)] pt-3">
+            <p className="text-[12.5px] text-[var(--ink-3)]">
+              &quot;Service worker hazır değil&quot; hatası alıyorsan, tarayıcıda eski bir
+              kurulum takılı kalmış olabilir. Aşağıdaki düğme kaydı ve önbelleği temizleyip
+              sıfırdan kurar.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => void handleReset()}
+              disabled={push.busy}
+            >
+              <Icon name="repeat" size={15} /> Sıfırla ve yeniden dene
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Tercihler */}
