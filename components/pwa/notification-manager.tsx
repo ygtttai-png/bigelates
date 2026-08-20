@@ -86,7 +86,7 @@ export function NotificationManager() {
               Bildirimleri Aç
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/notifications">Ayarlar</Link>
+              <Link href="/bildirim">Ayarlar</Link>
             </Button>
             <Button variant="ghost" size="sm" onClick={handleDismiss}>
               Şimdi değil

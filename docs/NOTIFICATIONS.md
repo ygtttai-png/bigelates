@@ -28,7 +28,7 @@ hiçbir şey çalışmadığı için bildirim düşmüyordu. Artık gönderimi s
 | Gönderici | `supabase/functions/notify/index.ts` (Edge Function, `verify_jwt = false`) |
 | Service worker | `worker/index.js` → build sırasında `public/sw.js` içine gömülür |
 | İstemci | `lib/notifications/push.ts`, `hooks/use-push-notifications.ts` |
-| Ekran | `/notifications` → `features/notifications/notifications-view.tsx` |
+| Ekran | `/bildirim` → `features/notifications/notifications-view.tsx` (menüde görünmez, adresten açılır) |
 
 ## Anahtarlar
 
@@ -56,7 +56,7 @@ SELECT vault.update_secret(id, 'yeni-deger') FROM vault.secrets WHERE name = 'va
 1. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` Vercel'de tanımlı mı? (Production + Preview)
 2. Uygulama HTTPS'te yayında mı? Push yalnızca https ve `localhost`'ta çalışır;
    `next dev` sırasında service worker devre dışı olduğu için bildirim çalışmaz.
-3. Kullanıcı `/notifications` ekranından "Bildirimleri aç" dedi mi?
+3. Kullanıcı `/bildirim` ekranından "Bildirimleri aç" dedi mi?
 4. iPhone: Safari → Paylaş → **Ana Ekrana Ekle**. iOS'ta web push yalnızca ana
    ekrana eklenmiş uygulamada çalışır (iOS 16.4+).
 

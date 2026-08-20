@@ -212,7 +212,7 @@ async function runTest(req: Request): Promise<Response> {
   const delivered = await sendToUser(userData.user.id, {
     title: "Bigelates bildirim testi",
     body: "Bildirimler çalışıyor. Ders hatırlatmaların bu şekilde düşecek.",
-    url: "/notifications",
+    url: "/bildirim",
     kind: "test",
   });
 

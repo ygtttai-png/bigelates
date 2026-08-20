@@ -26,11 +26,7 @@ export function TopBar() {
         >
           <Icon name={dark ? "sun" : "moon"} />
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Bildirimler" asChild>
-          <Link href="/notifications">
-            <Icon name="bell" />
-          </Link>
-        </Button>
+        {/* Bildirim ayarları gizli: yalnızca /bildirim adresinden açılır */}
         <Button variant="ghost" size="icon" asChild>
           <Link href="/settings" aria-label="Ayarlar">
             <Icon name="settings" />

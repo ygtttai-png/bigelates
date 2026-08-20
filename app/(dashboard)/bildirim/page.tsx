@@ -1,5 +1,5 @@
 import { NotificationsView } from "@/features/notifications/notifications-view";
 
-export default function NotificationsPage() {
+export default function BildirimPage() {
   return <NotificationsView />;
 }

@@ -16,9 +16,9 @@ const NAV_ITEMS: { icon: IconName; label: string; href: string; match: string[] 
   { icon: "plus", label: "Ders Ekle", href: "/lessons/new", match: ["/lessons/new", "/lessons"] },
   { icon: "users", label: "Öğrenciler", href: "/students", match: ["/students"] },
   { icon: "chart", label: "Raporlar", href: "/reports", match: ["/reports"] },
-  { icon: "bell", label: "Bildirimler", href: "/notifications", match: ["/notifications"] },
   { icon: "settings", label: "Ayarlar", href: "/settings", match: ["/settings"] },
 ];
+// Not: /bildirim menüde bilerek yok — yalnızca adresi bilen açar.
 
 export function Sidebar() {
   const pathname = usePathname();
