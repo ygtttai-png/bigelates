@@ -156,3 +156,81 @@ body {
 .toast-wrap {
   animation: toastIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+/* ─── Notification Drop Animations ─── */
+@keyframes notifDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.005);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notifLeave {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 160px;
+    margin-bottom: 12px;
+  }
+  50% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.96);
+    max-height: 160px;
+    margin-bottom: 12px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px) scale(0.96);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+  }
+}
+
+@keyframes notifFloatDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-100%) scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(6px) scale(1.01);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notifProgress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.notif-drop {
+  animation: notifDrop 0.48s cubic-bezier(0.22, 0.68, 0.28, 1.02) both;
+}
+
+.notif-leave {
+  animation: notifLeave 0.4s cubic-bezier(0.4, 0, 0.7, 0.2) forwards;
+}
+
+.notif-float-drop {
+  animation: notifFloatDrop 0.5s cubic-bezier(0.22, 0.68, 0.28, 1.02) both;
+}
+
+.notif-progress {
+  animation: notifProgress 6s linear forwards;
+}

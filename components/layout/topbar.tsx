@@ -26,8 +26,10 @@ export function TopBar() {
         >
           <Icon name={dark ? "sun" : "moon"} />
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Bildirimler">
-          <Icon name="bell" />
+        <Button variant="ghost" size="icon" aria-label="Bildirimler" asChild>
+          <Link href="/notifications">
+            <Icon name="bell" />
+          </Link>
         </Button>
         <Button variant="ghost" size="icon" asChild>
           <Link href="/settings" aria-label="Ayarlar">
