@@ -75,8 +75,44 @@ export async function requestPermission(): Promise<NotificationPermission> {
   return Notification.requestPermission();
 }
 
+/**
+ * Service worker "activated" olmadan pushManager.subscribe() çalışmaz
+ * ("no active Service Worker" hatası). Bu yüzden aktif olana kadar bekleriz.
+ */
+async function waitForActive(
+  registration: ServiceWorkerRegistration,
+  timeoutMs: number
+): Promise<ServiceWorkerRegistration | null> {
+  if (registration.active) return registration;
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (value: ServiceWorkerRegistration | null) => {
+      if (done) return;
+      done = true;
+      window.clearInterval(poll);
+      window.clearTimeout(timer);
+      resolve(value);
+    };
+
+    const check = () => {
+      if (registration.active) finish(registration);
+    };
+
+    const pending = registration.installing ?? registration.waiting;
+    pending?.addEventListener("statechange", check);
+    registration.addEventListener("updatefound", check);
+
+    // Durum değişimi olayını kaçırma ihtimaline karşı yoklama
+    const poll = window.setInterval(check, 250);
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
+
+    check();
+  });
+}
+
 async function readyRegistration(
-  timeoutMs = 8000
+  timeoutMs = 15000
 ): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
 
@@ -91,10 +127,17 @@ async function readyRegistration(
     }
   }
 
-  // Aktifleşmesini bekle, ama sonsuza kadar değil
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
-  const active = await Promise.race([navigator.serviceWorker.ready, timeout]);
-  return active ?? registration;
+  const active = await waitForActive(registration, timeoutMs);
+  if (active) return active;
+
+  // Kurulum bozuk kalmış olabilir: sıfırdan kaydedip bir kez daha bekle
+  try {
+    await registration.unregister();
+    const fresh = await navigator.serviceWorker.register("/sw.js");
+    return await waitForActive(fresh, timeoutMs);
+  } catch {
+    return null;
+  }
 }
 
 /** Mevcut aboneliği döner (varsa) — kayıt durumunu göstermek için */
@@ -120,9 +163,10 @@ export async function subscribeToPush(): Promise<PushSubscriptionKeys> {
   }
 
   const registration = await readyRegistration();
-  if (!registration) {
+  if (!registration?.active) {
     throw new Error(
-      "Service worker bulunamadı. Bildirimler yalnızca yayındaki (https) sürümde çalışır."
+      "Service worker hazır değil. Sayfayı yenileyip tekrar dene; sorun sürerse " +
+        "bildirimler yalnızca https (veya localhost) üzerinde çalışır."
     );
   }
 

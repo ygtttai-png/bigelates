@@ -11,6 +11,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*|offline).*)",
+    // sw.js'in importScripts ile çektiği worker-*/fallback-* dosyaları da muaf
+    // olmalı; aksi halde giriş yapılmamışken /login'e yönlenir ve service
+    // worker kurulumu (dolayısıyla push bildirimleri) başarısız olur.
+    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*|worker-.*|fallback-.*|offline).*)",
   ],
 };
