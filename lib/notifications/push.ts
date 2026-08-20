@@ -121,7 +121,7 @@ async function readyRegistration(
   if (!registration) {
     try {
       // next-pwa geliştirme modunda sw.js üretmez; orada bu adım başarısız olur
-      registration = await navigator.serviceWorker.register("/sw.js");
+      registration = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
     } catch {
       return null;
     }
@@ -133,7 +133,7 @@ async function readyRegistration(
   // Kurulum bozuk kalmış olabilir: sıfırdan kaydedip bir kez daha bekle
   try {
     await registration.unregister();
-    const fresh = await navigator.serviceWorker.register("/sw.js");
+    const fresh = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
     return await waitForActive(fresh, timeoutMs);
   } catch {
     return null;
@@ -165,8 +165,7 @@ export async function subscribeToPush(): Promise<PushSubscriptionKeys> {
   const registration = await readyRegistration();
   if (!registration?.active) {
     throw new Error(
-      "Service worker hazır değil. Sayfayı yenileyip tekrar dene; sorun sürerse " +
-        "bildirimler yalnızca https (veya localhost) üzerinde çalışır."
+      "Service worker hazır değil. Sayfayı yenileyip birkaç saniye sonra tekrar dene."
     );
   }
 
