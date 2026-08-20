@@ -13,7 +13,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useApp } from "@/components/providers/app-provider";
 import { fmtMoney, fmtMoneyShort } from "@/utils/currency";
 import { TR_DAYS, TR_DAYS_SHORT, TR_MONTHS, addDays, isSameDay, startOfWeek, today, ymd } from "@/utils/date";
-import { earnedFee, lessonsOn, newLessonPath } from "@/utils/lessons";
+import { earnedFee, lessonTypeLabel, lessonsOn, newLessonPath } from "@/utils/lessons";
 import type { Lesson } from "@/types";
 
 type ViewMode = "columns" | "timegrid" | "agenda";
@@ -94,7 +94,9 @@ export function WeeklyCalendar() {
 
 function blockLabel(l: Lesson, studentById: (id: string) => { name: string } | undefined) {
   const names = (l.student_ids ?? []).map((id) => studentById(id)?.name).filter(Boolean);
-  return l.type === "grup" ? `Grup · ${names.length}` : names[0] ?? "—";
+  return l.type === "grup"
+    ? `${lessonTypeLabel(l)} · ${names.length}`
+    : names[0] ?? "—";
 }
 
 function ColumnsView({
@@ -148,8 +150,8 @@ function ColumnsView({
                     </div>
                   </Link>
                   <div className="mt-1 flex items-center justify-between gap-1">
-                    <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${l.type === "ozel" ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]" : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"}`}>
-                      {l.type === "ozel" ? "Özel" : "Grup"}
+                    <span className={`max-w-[92px] truncate rounded px-1.5 py-0.5 text-[9px] font-bold ${l.type === "ozel" ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]" : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"}`}>
+                      {lessonTypeLabel(l)}
                     </span>
                     <div className="flex items-center gap-0.5">
                       <span className="tnum text-[11px]">{fmtMoneyShort(Number(l.fee))}</span>

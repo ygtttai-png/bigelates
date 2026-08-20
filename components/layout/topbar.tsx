@@ -29,6 +29,11 @@ export function TopBar() {
         <Button variant="ghost" size="icon" aria-label="Bildirimler">
           <Icon name="bell" />
         </Button>
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/settings" aria-label="Ayarlar">
+            <Icon name="settings" />
+          </Link>
+        </Button>
       </div>
     </div>
   );

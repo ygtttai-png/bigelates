@@ -16,6 +16,7 @@ const NAV_ITEMS: { icon: IconName; label: string; href: string; match: string[] 
   { icon: "plus", label: "Ders Ekle", href: "/lessons/new", match: ["/lessons/new", "/lessons"] },
   { icon: "users", label: "Öğrenciler", href: "/students", match: ["/students"] },
   { icon: "chart", label: "Raporlar", href: "/reports", match: ["/reports"] },
+  { icon: "settings", label: "Ayarlar", href: "/settings", match: ["/settings"] },
 ];
 
 export function Sidebar() {

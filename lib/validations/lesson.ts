@@ -4,6 +4,8 @@ export const lessonSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli bir tarih seçin"),
   time: z.string().regex(/^\d{2}:\d{2}$/, "Geçerli bir saat seçin"),
   type: z.enum(["ozel", "grup"]),
+  /** Ayarlardan tanımlı ders tipi; ad ve ücret kayıt anında derse kopyalanır */
+  lessonTypeId: z.string().uuid().nullable().default(null),
   studentIds: z.array(z.string().uuid()).min(1, "En az bir öğrenci seçin"),
   fee: z.number().min(0, "Ücret negatif olamaz"),
   status: z.enum(["planlandi", "geldi", "gelmedi", "iptal"]),

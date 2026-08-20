@@ -1,17 +1,53 @@
-import type { Lesson, LessonStatus } from "@/types";
+import type { Lesson, LessonKind, LessonStatus } from "@/types";
 import type { LessonDeleteScope, LessonInput } from "@/lib/validations/lesson";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { StudentsService } from "@/services/students.service";
-import { consumesPackageCredit } from "@/utils/lessons";
+import { consumesPackageCredit, defaultKindLabel } from "@/utils/lessons";
 import { generateRecurringDates } from "@/utils/recurrence";
 
 const IN_CHUNK_SIZE = 80;
+
+interface LessonTypeSnapshot {
+  kind: LessonKind;
+  label: string;
+}
 
 export class LessonsService {
   private readonly students: StudentsService;
 
   constructor(private readonly supabase: AppSupabaseClient) {
     this.students = new StudentsService(supabase);
+  }
+
+  /**
+   * Ders tipinin kayıt anındaki adını ve biçimini alır.
+   * Ad derse kopyalandığı için ayarlardan sonra yapılan değişiklik
+   * bu dersi etkilemez.
+   */
+  private async snapshotLessonType(
+    input: LessonInput,
+    /** Düzenlemede, tipi olmayan eski dersin kendi adı korunur */
+    previous?: Pick<Lesson, "type" | "type_label">
+  ): Promise<LessonTypeSnapshot> {
+    if (!input.lessonTypeId) {
+      const keepLabel =
+        previous && previous.type === input.type ? previous.type_label?.trim() : null;
+      return { kind: input.type, label: keepLabel || defaultKindLabel(input.type) };
+    }
+
+    const { data, error } = await this.supabase
+      .from("lesson_types")
+      .select("name, kind")
+      .eq("id", input.lessonTypeId)
+      .is("deleted_at", null)
+      .single();
+
+    if (error || !data) {
+      return { kind: input.type, label: defaultKindLabel(input.type) };
+    }
+
+    const row = data as { name: string; kind: LessonKind };
+    return { kind: row.kind, label: row.name };
   }
 
   private async fetchStudentLinks(lessonIds: string[]): Promise<Map<string, string[]>> {
@@ -107,11 +143,15 @@ export class LessonsService {
       ? generateRecurringDates(input.date, recurrence)
       : [input.date];
 
+    const snapshot = await this.snapshotLessonType(input);
+
     const rows = dates.map((date, index) => ({
       studio_id: studioId,
       date,
       time: input.time,
-      type: input.type,
+      type: snapshot.kind,
+      lesson_type_id: input.lessonTypeId,
+      type_label: snapshot.label,
       status: index === 0 ? input.status : ("planlandi" as LessonStatus),
       fee: input.fee,
       note: input.note ?? null,
@@ -150,12 +190,16 @@ export class LessonsService {
       await this.students.adjustPackageCredits(existing.student_ids ?? [], 1);
     }
 
+    const snapshot = await this.snapshotLessonType(input, existing);
+
     const { data, error } = await this.supabase
       .from("lessons")
       .update({
         date: input.date,
         time: input.time,
-        type: input.type,
+        type: snapshot.kind,
+        lesson_type_id: input.lessonTypeId,
+        type_label: snapshot.label,
         status: input.status,
         fee: input.fee,
         note: input.note ?? null,

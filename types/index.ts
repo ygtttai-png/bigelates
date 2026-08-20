@@ -1,6 +1,7 @@
 export type {
   Database,
   Lesson,
+  LessonKind,
   LessonRecurrence,
   LessonStatus,
   LessonStudent,

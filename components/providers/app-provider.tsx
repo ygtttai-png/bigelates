@@ -5,9 +5,11 @@ import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "./toast-provider";
 import { useProfile } from "@/hooks/use-profile";
 import { useLessons } from "@/hooks/use-lessons";
+import { useLessonTypes } from "@/hooks/use-lesson-types";
 import { useStudents } from "@/hooks/use-students";
-import type { Lesson, Profile, Student, Studio } from "@/types";
+import type { Lesson, LessonType, Profile, Student, Studio } from "@/types";
 import type { LessonDeleteScope, LessonInput } from "@/lib/validations/lesson";
+import type { LessonTypeInput } from "@/lib/validations/lesson-type";
 import type { StudentCreateInput, StudentUpdateInput } from "@/lib/validations/student";
 import type { LessonStatus } from "@/types";
 
@@ -16,6 +18,7 @@ interface AppContextValue {
   studio: Studio | null;
   lessons: Lesson[];
   students: Student[];
+  lessonTypes: LessonType[];
   loading: boolean;
   error: string | null;
   setLessonStatus: (id: string, status: LessonStatus) => Promise<void>;
@@ -26,6 +29,9 @@ interface AppContextValue {
   updateStudent: (id: string, input: StudentUpdateInput) => Promise<Student>;
   deleteStudent: (id: string) => Promise<void>;
   studentById: (id: string) => Student | undefined;
+  createLessonType: (input: LessonTypeInput) => Promise<LessonType>;
+  updateLessonType: (id: string, input: LessonTypeInput) => Promise<LessonType>;
+  setLessonTypeArchived: (id: string, archived: boolean) => Promise<LessonType>;
 }
 
 const AppContext = React.createContext<AppContextValue | null>(null);
@@ -56,6 +62,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateStudent,
     deleteStudent,
   } = useStudents({ studioId });
+  const {
+    lessonTypes,
+    loading: lessonTypesLoading,
+    error: lessonTypesError,
+    createLessonType,
+    updateLessonType,
+    setLessonTypeArchived,
+  } = useLessonTypes({ studioId });
 
   const studentById = React.useCallback(
     (id: string) => students.find((s) => s.id === id),
@@ -67,8 +81,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     studio,
     lessons,
     students,
-    loading: profileLoading || lessonsLoading || studentsLoading,
-    error: profileError ?? lessonsError ?? studentsError,
+    lessonTypes,
+    loading: profileLoading || lessonsLoading || studentsLoading || lessonTypesLoading,
+    error: profileError ?? lessonsError ?? studentsError ?? lessonTypesError,
     setLessonStatus: setStatus,
     createLesson,
     updateLesson,
@@ -77,6 +92,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateStudent,
     deleteStudent,
     studentById,
+    createLessonType,
+    updateLessonType,
+    setLessonTypeArchived,
   };
 
   return (

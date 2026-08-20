@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { StudentsService } from "@/services/students.service";
 import { fmtMoney } from "@/utils/currency";
 import { TR_MONTHS, parseYmd } from "@/utils/date";
-import { PAY_LABEL } from "@/utils/lessons";
+import { PAY_LABEL, lessonTypeLabel } from "@/utils/lessons";
 import type { Lesson, Payment } from "@/types";
 
 interface StudentDetailProps {
@@ -254,7 +254,7 @@ function LessonTimelineItem({ lesson: l }: { lesson: Lesson }) {
           <StatusPill status={l.status} size="sm" />
         </div>
         <div className="mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-          {l.type === "ozel" ? "Özel ders" : "Grup dersi"} · {fmtMoney(Number(l.fee))}
+          {lessonTypeLabel(l)} · {fmtMoney(Number(l.fee))}
         </div>
       </div>
     </Link>

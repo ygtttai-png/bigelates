@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   BarChart3,
@@ -20,6 +21,7 @@ import {
   Plus,
   Repeat2,
   Search,
+  Settings,
   Sparkles,
   StickyNote,
   Sun,
@@ -63,6 +65,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   spark: Sparkles,
   card: CreditCard,
   eye: Eye,
+  alert: AlertTriangle,
+  settings: Settings,
 };
 
 export type IconName = keyof typeof ICON_MAP;

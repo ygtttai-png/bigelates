@@ -11,6 +11,7 @@ function getGroup(pathname: string): string {
   if (pathname.startsWith("/lessons")) return "add";
   if (pathname.startsWith("/students")) return "students";
   if (pathname.startsWith("/reports")) return "reports";
+  if (pathname.startsWith("/settings")) return "settings";
   return "home";
 }
 

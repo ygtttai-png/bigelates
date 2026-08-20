@@ -1,5 +1,19 @@
-import type { Lesson, LessonStatus } from "@/types";
+import type { Lesson, LessonKind, LessonStatus } from "@/types";
 import { isSameDay, parseYmd, today, ymd } from "./date";
+
+/** Ders tipi tanımlanmamışsa kullanılan varsayılan ad */
+export function defaultKindLabel(kind: LessonKind): string {
+  return kind === "ozel" ? "Özel ders" : "Grup dersi";
+}
+
+/**
+ * Dersin ekranda görünen tip adı.
+ * Kayıt anında yazılan ada bakar — ayarlarda ders tipi sonradan
+ * yeniden adlandırılsa bile geçmiş dersler eski adını korur.
+ */
+export function lessonTypeLabel(lesson: Pick<Lesson, "type" | "type_label">): string {
+  return lesson.type_label?.trim() || defaultKindLabel(lesson.type);
+}
 
 export const STATUS_META: Record<
   LessonStatus,

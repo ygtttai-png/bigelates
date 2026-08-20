@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { useApp } from "@/components/providers/app-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { fmtMoney } from "@/utils/currency";
+import { lessonTypeLabel } from "@/utils/lessons";
 import type { Lesson } from "@/types";
 import { cn } from "@/lib/utils";
 import { RECURRENCE_LABELS } from "@/utils/recurrence";
@@ -26,10 +27,8 @@ export function LessonRow({ lesson, compact }: LessonRowProps) {
     .map((id) => studentById(id))
     .filter(Boolean);
   const names = students.map((s) => s!.name);
-  const title =
-    lesson.type === "grup"
-      ? `Grup dersi · ${names.length} kişi`
-      : names[0] ?? "—";
+  const typeLabel = lessonTypeLabel(lesson);
+  const title = lesson.type === "grup" ? `${names.length} kişi` : names[0] ?? "—";
   const sub =
     lesson.type === "grup"
       ? names.join(", ")
@@ -85,13 +84,13 @@ export function LessonRow({ lesson, compact }: LessonRowProps) {
           </span>
           <span
             className={cn(
-              "rounded-[7px] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide",
+              "max-w-[160px] truncate rounded-[7px] px-2 py-0.5 text-[11px] font-bold",
               lesson.type === "ozel"
                 ? "bg-[var(--sage-soft)] text-[var(--sage-ink)]"
                 : "bg-[var(--plum-soft)] text-[var(--plum-ink)]"
             )}
           >
-            {lesson.type === "ozel" ? "Özel" : "Grup"}
+            {typeLabel}
           </span>
           {lesson.recurrence !== "none" && (
             <span

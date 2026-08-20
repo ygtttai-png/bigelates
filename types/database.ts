@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "staff" | "user";
-export type LessonType = "ozel" | "grup";
+/** Dersin çalışma biçimi: tek kişilik mi, grup mu (grupta ücret kişi başı) */
+export type LessonKind = "ozel" | "grup";
 export type LessonStatus = "planlandi" | "geldi" | "gelmedi" | "iptal";
 export type LessonRecurrence = "none" | "weekly" | "monthly";
 export type PaymentStatus = "odendi" | "bekliyor";
@@ -39,7 +40,7 @@ export interface Student {
   studio_id: string;
   name: string;
   phone: string;
-  type: LessonType;
+  type: LessonKind;
   package_total: number;
   remaining: number;
   payment_status: PaymentStatus;
@@ -52,12 +53,30 @@ export interface Student {
   deleted_at: string | null;
 }
 
+/** Stüdyonun ayarlardan tanımladığı ders tipi (ad + ücret) */
+export interface LessonType {
+  id: string;
+  studio_id: string;
+  name: string;
+  kind: LessonKind;
+  price: number;
+  sort_order: number;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 export interface Lesson {
   id: string;
   studio_id: string;
   date: string;
   time: string;
-  type: LessonType;
+  type: LessonKind;
+  /** Kaydedildiği andaki ders tipi — sonradan tip değişse de bu ders bağlı kalır */
+  lesson_type_id: string | null;
+  /** Kaydedildiği andaki ders tipi adı; geçmiş kayıtlar bu adı korur */
+  type_label: string | null;
   status: LessonStatus;
   fee: number;
   note: string | null;
@@ -122,7 +141,7 @@ export type Database = {
           studio_id: string;
           name: string;
           phone: string;
-          type?: LessonType;
+          type?: LessonKind;
           package_total?: number;
           remaining?: number;
           payment_status?: PaymentStatus;
@@ -140,7 +159,9 @@ export type Database = {
           studio_id: string;
           date: string;
           time: string;
-          type: LessonType;
+          type: LessonKind;
+          lesson_type_id?: string | null;
+          type_label?: string | null;
           status?: LessonStatus;
           fee?: number;
           note?: string | null;
@@ -148,6 +169,19 @@ export type Database = {
           recurrence_group_id?: string | null;
         };
         Update: Partial<Omit<Lesson, "id" | "created_at">>;
+        Relationships: [];
+      };
+      lesson_types: {
+        Row: LessonType;
+        Insert: {
+          studio_id: string;
+          name: string;
+          kind?: LessonKind;
+          price?: number;
+          sort_order?: number;
+          archived_at?: string | null;
+        };
+        Update: Partial<Omit<LessonType, "id" | "created_at">>;
         Relationships: [];
       };
       lesson_students: {
@@ -182,7 +216,7 @@ export type Database = {
     };
     Enums: {
       user_role: UserRole;
-      lesson_type: LessonType;
+      lesson_type: LessonKind;
       lesson_status: LessonStatus;
       payment_status: PaymentStatus;
     };

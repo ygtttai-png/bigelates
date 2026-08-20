@@ -14,6 +14,7 @@ import { lessonSchema } from "@/lib/validations/lesson";
 import { fmtMoney } from "@/utils/currency";
 import { today, ymd } from "@/utils/date";
 import { DEFAULT_PRICE_GRUP, DEFAULT_PRICE_OZEL, TIME_OPTIONS } from "@/utils/lessons";
+import { packageAvailabilityByStudent, type PackageAvailability } from "@/utils/students";
 import {
   RECURRENCE_COUNTS,
   RECURRENCE_LABELS,
@@ -22,6 +23,12 @@ import {
 
 interface LessonFormProps {
   lessonId?: string;
+}
+
+function packageAlertText(pkg: PackageAvailability): string {
+  if (pkg.level === "last") return "paketinde son 1 ders kaldı";
+  if (pkg.remaining <= 0) return "paketi bitti, yenilenmesi gerekiyor";
+  return `paketindeki ${pkg.remaining} dersin tamamı planlandı`;
 }
 
 function resolveInitialDate(editingDate?: string, queryDate?: string | null): string {
@@ -34,16 +41,27 @@ export function LessonForm({ lessonId }: LessonFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const { lessons, students, studio, loading, createLesson, updateLesson } = useApp();
+  const { lessons, lessonTypes, students, studio, loading, createLesson, updateLesson } = useApp();
 
   const editing = lessonId ? lessons.find((l) => l.id === lessonId) : null;
   const PRICE_OZEL = studio?.settings?.price_ozel ?? DEFAULT_PRICE_OZEL;
   const PRICE_GRUP = studio?.settings?.price_grup ?? DEFAULT_PRICE_GRUP;
 
+  /**
+   * Seçilebilir tipler: aktif olanlar + düzenlenen dersin (pasife alınmış olabilir)
+   * kendi tipi. Böylece eski bir dersi açtığında tipi kaybolmaz.
+   */
+  const selectableTypes = lessonTypes.filter(
+    (t) => !t.archived_at || t.id === editing?.lesson_type_id
+  );
+
   const [date, setDate] = useState(() =>
     resolveInitialDate(editing?.date, searchParams.get("date"))
   );
   const [time, setTime] = useState(editing?.time?.slice(0, 5) ?? "09:00");
+  const [lessonTypeId, setLessonTypeId] = useState<string | null>(
+    editing?.lesson_type_id ?? null
+  );
   const [type, setType] = useState<"ozel" | "grup">(editing?.type ?? "ozel");
   const [ids, setIds] = useState<string[]>(editing?.student_ids ?? []);
   const [fee, setFee] = useState(Number(editing?.fee ?? PRICE_OZEL));
@@ -55,15 +73,42 @@ export function LessonForm({ lessonId }: LessonFormProps) {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
 
+  const selectedType = lessonTypes.find((t) => t.id === lessonTypeId) ?? null;
+  const defaultTypeId = selectableTypes[0]?.id ?? null;
+
+  /** Birim ücret: ders tipinin güncel fiyatı (grup tipinde kişi başı) */
+  const unitPrice = selectedType
+    ? Number(selectedType.price)
+    : type === "ozel"
+      ? PRICE_OZEL
+      : PRICE_GRUP;
+
+  // Yeni derste, tipler yüklenince ilk tip seçili gelsin
+  useEffect(() => {
+    if (editing || lessonTypeId || !defaultTypeId) return;
+    const first = lessonTypes.find((t) => t.id === defaultTypeId);
+    if (!first) return;
+    setLessonTypeId(first.id);
+    setType(first.kind);
+  }, [editing, lessonTypeId, defaultTypeId, lessonTypes]);
+
   useEffect(() => {
     if (feeEdited) return;
-    setFee(type === "ozel" ? PRICE_OZEL : PRICE_GRUP * Math.max(1, ids.length));
-  }, [type, ids, feeEdited, PRICE_OZEL, PRICE_GRUP]);
+    setFee(type === "grup" ? unitPrice * Math.max(1, ids.length) : unitPrice);
+  }, [type, ids, feeEdited, unitPrice]);
 
   const toggleStudent = (id: string) => {
     setErrors((e) => ({ ...e, ids: null }));
     if (type === "ozel") setIds(ids[0] === id ? [] : [id]);
     else setIds(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+  };
+
+  const selectLessonType = (typeId: string, kind: "ozel" | "grup") => {
+    setLessonTypeId(typeId);
+    setType(kind);
+    // Tip değişince ücret yeni tipin fiyatından hesaplansın
+    setFeeEdited(false);
+    if (kind === "ozel" && ids.length > 1) setIds(ids.slice(0, 1));
   };
 
   const switchType = (t: "ozel" | "grup") => {
@@ -75,11 +120,25 @@ export function LessonForm({ lessonId }: LessonFormProps) {
     s.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  /** Öğrenci id → paket durumu (düzenlenen dersin kendisi planlı sayılmaz) */
+  const packageByStudent = packageAvailabilityByStudent(students, lessons, {
+    excludeLessonId: lessonId,
+  });
+
+  const packageAlerts = ids
+    .map((id) => ({ student: students.find((s) => s.id === id), pkg: packageByStudent.get(id) }))
+    .filter((a): a is { student: (typeof students)[number]; pkg: PackageAvailability } =>
+      !!a.student && !!a.pkg && a.pkg.level !== "ok"
+    );
+
+  const hasEmptyPackage = packageAlerts.some((a) => a.pkg.level === "empty");
+
   const save = async () => {
     const payload = {
       date,
       time,
       type,
+      lessonTypeId,
       studentIds: ids,
       fee: Number(fee),
       status,
@@ -119,6 +178,17 @@ export function LessonForm({ lessonId }: LessonFormProps) {
           { tone: "green", icon: "check" }
         );
       }
+
+      if (packageAlerts.length > 0) {
+        const empty = packageAlerts.filter((a) => a.pkg.level === "empty");
+        toast(
+          empty.length > 0
+            ? `${empty.map((a) => a.student.name).join(", ")} · paketi bitti, yenilemeyi unutmayın`
+            : `${packageAlerts.map((a) => a.student.name).join(", ")} · paketinde son 1 ders kaldı`,
+          { tone: empty.length > 0 ? "rose" : "sage", icon: "alert", duration: 4200 }
+        );
+      }
+
       router.push("/calendar/weekly");
     } catch {
       toast("Kayıt başarısız", { tone: "rose", icon: "x" });
@@ -149,19 +219,59 @@ export function LessonForm({ lessonId }: LessonFormProps) {
 
       <Card className="p-5">
         <div className="mb-4">
-          <label className="mb-1.5 block text-[13px] font-semibold text-[var(--ink-2)]">Ders tipi</label>
-          <div className="flex gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-1">
-            {(["ozel", "grup"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={`flex-1 rounded-[9px] px-3 py-2 text-[13.5px] font-semibold transition-all ${type === t ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow-sm)]" : "text-[var(--ink-2)]"}`}
-                onClick={() => switchType(t)}
-              >
-                {t === "ozel" ? "Özel ders" : "Grup dersi"}
-              </button>
-            ))}
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-[13px] font-semibold text-[var(--ink-2)]">Ders tipi</label>
+            <Link
+              href="/settings"
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[var(--accent-ink)]"
+            >
+              <Icon name="settings" size={14} /> Düzenle
+            </Link>
           </div>
+
+          {selectableTypes.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {selectableTypes.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`rounded-xl border px-3 py-2 text-left text-[13.5px] font-semibold transition-all ${
+                      lessonTypeId === t.id
+                        ? "border-transparent bg-[var(--accent-soft)] text-[var(--accent-ink)] shadow-[var(--shadow-sm)]"
+                        : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"
+                    }`}
+                    onClick={() => selectLessonType(t.id, t.kind)}
+                  >
+                    {t.name}
+                    <span className="ml-1.5 font-normal text-[var(--ink-3)]">
+                      {fmtMoney(Number(t.price))}
+                      {t.kind === "grup" ? "/kişi" : ""}
+                    </span>
+                    {t.archived_at && (
+                      <span className="ml-1.5 font-normal text-[var(--ink-3)]">· pasif</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-[var(--ink-3)]">
+                Ücret bu derse kaydedilir; ayarlardan fiyat değiştirmek eski dersleri etkilemez.
+              </p>
+            </>
+          ) : (
+            <div className="flex gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-1">
+              {(["ozel", "grup"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`flex-1 rounded-[9px] px-3 py-2 text-[13.5px] font-semibold transition-all ${type === t ? "bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow-sm)]" : "text-[var(--ink-2)]"}`}
+                  onClick={() => switchType(t)}
+                >
+                  {t === "ozel" ? "Özel ders" : "Grup dersi"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-4 flex flex-wrap gap-5">
@@ -234,26 +344,69 @@ export function LessonForm({ lessonId }: LessonFormProps) {
             </div>
           )}
           <div className="flex max-h-[168px] flex-wrap gap-1.5 overflow-y-auto">
-            {filtered.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium ${ids.includes(s.id) ? "border-transparent bg-[var(--accent-soft)] font-semibold text-[var(--accent-ink)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}
-                onClick={() => toggleStudent(s.id)}
-              >
-                <AvatarChip student={s} />
-                {s.name}
-              </button>
-            ))}
+            {filtered.map((s) => {
+              const pkg = packageByStudent.get(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium ${ids.includes(s.id) ? "border-transparent bg-[var(--accent-soft)] font-semibold text-[var(--accent-ink)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}
+                  onClick={() => toggleStudent(s.id)}
+                >
+                  <AvatarChip student={s} />
+                  {s.name}
+                  {pkg && pkg.level !== "ok" && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10.5px] font-bold ${pkg.level === "empty" ? "bg-[var(--rose-soft)] text-[var(--rose-ink)]" : "bg-[color-mix(in_oklab,var(--gold)_18%,transparent)] text-[var(--gold)]"}`}
+                    >
+                      {pkg.level === "empty" ? "paket bitti" : "son 1"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           {errors.ids && <p className="mt-1 text-xs text-[var(--rose-ink)]">{errors.ids}</p>}
           {errors.studentIds && <p className="mt-1 text-xs text-[var(--rose-ink)]">{errors.studentIds}</p>}
         </div>
 
+        {packageAlerts.length > 0 && (
+          <div
+            className={`mb-4 rounded-xl border px-3 py-2.5 ${
+              hasEmptyPackage
+                ? "border-[var(--rose)] bg-[var(--rose-soft)]"
+                : "border-[var(--gold)] bg-[color-mix(in_oklab,var(--gold)_12%,transparent)]"
+            }`}
+          >
+            <div
+              className={`flex items-center gap-2 text-[13.5px] font-semibold ${hasEmptyPackage ? "text-[var(--rose-ink)]" : "text-[var(--gold)]"}`}
+            >
+              <Icon name="alert" size={16} />
+              {hasEmptyPackage ? "Paket bitti" : "Paket bitmek üzere"}
+            </div>
+            <ul className="mt-1.5 space-y-1 text-[13px] text-[var(--ink-2)]">
+              {packageAlerts.map(({ student, pkg }) => (
+                <li key={student.id}>
+                  <strong>{student.name}</strong> — {packageAlertText(pkg)}
+                  {pkg.planned > 0 && (
+                    <span className="text-[var(--ink-3)]">
+                      {" "}
+                      ({pkg.remaining} kalan · {pkg.planned} planlı ders)
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-xs text-[var(--ink-3)]">
+              Dersi yine de kaydedebilirsiniz; paketi öğrenci kartından yenileyebilirsiniz.
+            </p>
+          </div>
+        )}
+
         <div className="mb-4 flex flex-wrap gap-5">
           <div className="min-w-[180px] flex-1">
             <label className="mb-1.5 block text-[13px] font-semibold text-[var(--ink-2)]">
-              Ders ücreti {type === "grup" && <span className="font-normal text-[var(--ink-3)]">· kişi başı {fmtMoney(PRICE_GRUP)}</span>}
+              Ders ücreti {type === "grup" && <span className="font-normal text-[var(--ink-3)]">· kişi başı {fmtMoney(unitPrice)}</span>}
             </label>
             <input type="number" className="tnum h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3" value={fee} onChange={(e) => { setFee(Number(e.target.value)); setFeeEdited(true); }} />
           </div>
